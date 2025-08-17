@@ -195,7 +195,7 @@ const TrangChu = ({ navigation }) => {
       />
 
       {/* SẢN PHẨM - lưới 2 cột, lướt dọc */}
-      <Text style={[styles.heading, { marginTop: 20 }]}>Sản phẩm</Text>
+      <Text style={[styles.heading, { marginTop: 10 , }]}>Sản phẩm</Text>
       <FlatList
         data={sanpham}
         keyExtractor={(item) => item.id.toString()}
@@ -542,6 +542,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     // marginTop: -3, // đẩy lên sát header bo góc
     marginBottom: 12,
+    padding: 10,
   },
 
   searchBox: {
@@ -567,7 +568,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#fff',
+    color: '#141414ff',
   },
   iconGroup: {
     flexDirection: 'row',
@@ -578,6 +579,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginVertical: 10,
     color: '#333',
+    marginTop: -3,
   },
 categoryButton: {
   backgroundColor: '#fff',

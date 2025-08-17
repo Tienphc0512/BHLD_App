@@ -66,7 +66,7 @@ export default function DangNhap() {
           <Text style={styles.title}>Đăng Nhập để tiếp tục</Text>
           <Text style={styles.t1}>Tên đăng nhập</Text>
           <View style={styles.inputWrapper}>
-            <FontAwesome name="user" size={20} color="#888" style={styles.inputIcon} />
+            <FontAwesome name="user" size={20} color="#555" style={styles.inputIcon} />
             <TextInput
               style={styles.input}
               placeholder="Tên đăng nhập"
@@ -77,7 +77,7 @@ export default function DangNhap() {
 
           <Text style={styles.t1}>Mật khẩu</Text>
           <View style={styles.inputWrapper}>
-            <MaterialIcons name="lock" size={20} color="#888" style={styles.inputIcon} />
+            <MaterialIcons name="lock" size={20} color="#555" style={styles.inputIcon} />
             <TextInput
               style={styles.input}
               placeholder="Mật khẩu"
@@ -179,10 +179,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: '#068ea9ff',
     borderRadius: 6,
     backgroundColor: '#fff',
     marginBottom: 15,
+    
   },
 
   inputIcon: {

@@ -152,7 +152,7 @@ const handlePlaceOrder = async () => {
 
 
   const handleFetchOrderDetailsWithId = () => {
-    navigation.navigate("Theo dõi đơn", {  orderDetails: {
+    navigation.navigate("Đơn hàng", {  orderDetails: {
     
   } })
     setLoading(true);

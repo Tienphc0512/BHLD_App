@@ -57,7 +57,7 @@ function MainTabs() {
 
           if (route.name === 'Trang chủ') iconName = 'home-outline';
           else if (route.name === 'Giỏ hàng') iconName = 'cart-outline';
-          else if (route.name === 'Theo dõi đơn') iconName = 'receipt-outline';
+          else if (route.name === 'Đơn hàng') iconName = 'receipt-outline';
          else if (route.name === 'Cài đặt') iconName = 'settings';
 
           return <Ionicons name={iconName} size={size} color={color} />;
@@ -69,7 +69,7 @@ function MainTabs() {
     >
       <Tab.Screen name="Trang chủ" component={TrangChu} />
       <Tab.Screen name="Giỏ hàng" component={GioHang} />
-      <Tab.Screen name="Theo dõi đơn" component={TheodoiDH} />
+      <Tab.Screen name="Đơn hàng" component={TheodoiDH} />
       <Tab.Screen name="Cài đặt" component={CaiDat} />
     </Tab.Navigator>
   );
