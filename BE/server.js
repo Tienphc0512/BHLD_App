@@ -637,7 +637,7 @@ JOIN nguoidung u ON u.id = dh.user_id
 LEFT JOIN diachi d ON d.id = dh.diachi_id
 
 WHERE dh.user_id = $1
-AND dh.trangthai IN ('choxuly', 'danggiao') -- chỉ lấy 2 trạng thái cần thiết
+AND dh.trangthai IN ('choxuly', 'danggiao', 'hoanthanh', 'dahuy') 
 ORDER BY dh.ngaydat DESC
 
       `,
@@ -656,7 +656,7 @@ app.get("/api/lich_su_dat_hang", verifyToken, async (req, res) => {
     const userId = req.userId;
 
     const result = await pool.query(
-      `SELECT dh.id, dh.ngaydat, dh.tongtien,
+      `SELECT dh.id as dathang_id, dh.ngaydat, dh.tongtien,
               sp.ten AS tensanpham,
               dh.hinhthuc_thanhtoan,
               ct.dongia, ct.soluong,
@@ -679,7 +679,6 @@ app.get("/api/lich_su_dat_hang", verifyToken, async (req, res) => {
     res.status(500).json({ error: "Lỗi khi lấy lịch sử đặt hàng" });
   }
 });
-
 
 
 
