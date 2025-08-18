@@ -9,7 +9,8 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  RefreshControl
+  RefreshControl,
+  ToastAndroid,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import axios from "axios";
@@ -78,7 +79,9 @@ const ChatBot = () => {
     setRefreshing(false);
   };
 
-
+  const handlePress = () => {
+    ToastAndroid.show("Tính năng này sẽ được phát triển sau", ToastAndroid.SHORT);
+  }
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -86,8 +89,8 @@ const ChatBot = () => {
     >
       {/* Header có icon lịch sử */}
       <View style={styles.header}>
-        <Text style={styles.title}>Chat với AI</Text>
-        <TouchableOpacity onPress={() => navigation.navigate("Lịch Sử Chatbot")}>
+        <Text style={styles.title}>AnTiiCo</Text>
+        <TouchableOpacity onPress={handlePress}>
           <Ionicons name="time-outline" size={28} color="#007AFF" />
         </TouchableOpacity>
       </View>
