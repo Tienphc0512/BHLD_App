@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Modal, View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, ToastAndroid } from 'react-native';
 import { fetchDiaChi, updateDiaChi, deleteDiaChi, addDiaChi } from '../../service/api';
 import { useAuth } from '../../context/Auth';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function DiaChiModal({ visible, onClose }) {
   const { token } = useAuth();
@@ -10,13 +11,10 @@ export default function DiaChiModal({ visible, onClose }) {
   const [loading, setLoading] = useState(false);
   const [newDiaChi, setNewDiaChi] = useState('');
 
-
   const loadDiaChi = async () => {
     setLoading(true);
     try {
       const data = await fetchDiaChi(token);
-          // console.log('Dữ liệu địa chỉ:', data); 
-
       setList(data);
     } catch (err) {
       alert(err.message);
@@ -24,22 +22,15 @@ export default function DiaChiModal({ visible, onClose }) {
     setLoading(false);
   };
 
-  useEffect(() => {
-    if (visible) loadDiaChi();
-  }, [visible]);
+  useEffect(() => { if (visible) loadDiaChi(); }, [visible]);
 
   const handleUpdate = async (index) => {
     try {
-      await updateDiaChi(list[index].id, {
-        diachi: list[index].diachi,
-        macdinh: list[index].macdinh
-      }, token);
+      await updateDiaChi(list[index].id, { diachi: list[index].diachi, macdinh: list[index].macdinh }, token);
       ToastAndroid.show('Cập nhật địa chỉ thành công', ToastAndroid.SHORT);
       setEditIndex(null);
       loadDiaChi();
-    } catch (err) {
-      alert(err.message);
-    }
+    } catch (err) { alert(err.message); }
   };
 
   const handleDelete = async (id) => {
@@ -47,24 +38,18 @@ export default function DiaChiModal({ visible, onClose }) {
       await deleteDiaChi(id, token);
       loadDiaChi();
       ToastAndroid.show('Xóa địa chỉ thành công', ToastAndroid.SHORT);
-    } catch (err) {
-      alert(err.message);
-    }
+    } catch (err) { alert(err.message); }
   };
 
-const handleAdd = async () => {
-  if (!newDiaChi.trim()) return alert('Vui lòng nhập địa chỉ');
-
-  try {
-    await addDiaChi({ diachi: newDiaChi, macdinh: false }, token);
-    setNewDiaChi('');
-    loadDiaChi();
-    ToastAndroid.show('Thêm địa chỉ thành công', ToastAndroid.SHORT);
-  } catch (err) {
-    alert(err.message);
-  }
-};
-
+  const handleAdd = async () => {
+    if (!newDiaChi.trim()) return alert('Vui lòng nhập địa chỉ');
+    try {
+      await addDiaChi({ diachi: newDiaChi, macdinh: false }, token);
+      setNewDiaChi('');
+      loadDiaChi();
+      ToastAndroid.show('Thêm địa chỉ thành công', ToastAndroid.SHORT);
+    } catch (err) { alert(err.message); }
+  };
 
   const handleInputChange = (index, key, value) => {
     const updatedList = [...list];
@@ -73,116 +58,112 @@ const handleAdd = async () => {
   };
 
   return (
-    <Modal visible={visible} animationType="slide">
-      <View style={styles.container}>
-        <Text style={styles.title}>Danh sách địa chỉ</Text>
-        <View style={{ marginVertical: 10 }}>
-  <Text style={{ fontWeight: 'bold' }}>Thêm địa chỉ mới</Text>
-  <TextInput
-    value={newDiaChi}
-    onChangeText={setNewDiaChi}
-    placeholder="Nhập địa chỉ mới"
-    style={styles.input}
-  />
-  <TouchableOpacity
-    onPress={handleAdd}
-    style={{ ...styles.saveBtn, marginTop: 5 }}
-  >
-    <Text style={styles.btnText}>Thêm địa chỉ</Text>
-  </TouchableOpacity>
-</View>
+    <Modal visible={visible} animationType="slide" transparent>
+      <View style={styles.overlay}>
+        <View style={styles.container}>
+          
+          {/* Header Modal */}
+          <View style={styles.header}>
+            <Text style={styles.title}>Quản lý địa chỉ</Text>
+            <TouchableOpacity onPress={onClose}>
+              <Ionicons name="close-circle" size={28} color="#4A6FA5" />
+            </TouchableOpacity>
+          </View>
 
+          {/* Thêm địa chỉ mới */}
+          <View style={styles.newCard}>
+            <TextInput
+              value={newDiaChi}
+              onChangeText={setNewDiaChi}
+              placeholder="Nhập địa chỉ mới"
+              style={styles.input}
+            />
+            <TouchableOpacity onPress={handleAdd} style={styles.addBtn}>
+              <Text style={styles.btnText}>Thêm địa chỉ</Text>
+            </TouchableOpacity>
+          </View>
 
-        <ScrollView>
-          {loading ? <Text>Đang tải...</Text> :
-            list.map((item, index) => (
-              <View key={item._id || index.toString()} style={styles.item}>
-                {editIndex === index ? (
-                  <>
-                    <TextInput
-                      value={item.diachi}
-                      onChangeText={(text) => handleInputChange(index, 'diachi', text)}
-                      style={styles.input}
-                    />
-                   <View style={{ flexDirection: 'row', marginBottom: 5 }}>
-  <TouchableOpacity
-    style={[styles.radioOption, item.macdinh && styles.radioSelected]}
-    onPress={() => handleInputChange(index, 'macdinh', true)}
-  >
-    <Text style={styles.radioText}>Địa chỉ chính</Text>
-  </TouchableOpacity>
-  <TouchableOpacity
-    style={[styles.radioOption, !item.macdinh && styles.radioSelected]}
-    onPress={() => handleInputChange(index, 'macdinh', false)}
-  >
-    <Text style={styles.radioText}>Địa chỉ phụ</Text>
-  </TouchableOpacity>
-</View>
-
-                    <TouchableOpacity onPress={() => handleUpdate(index)} style={styles.saveBtn}>
-                      <Text style={styles.btnText}>Lưu</Text>
-                    </TouchableOpacity>
-                  </>
-                ) : (
-                  <>
-                    <Text style={styles.text}>Địa chỉ: {item.diachi}</Text>
-                    <Text style={styles.text}>
-  Loại địa chỉ: {item.macdinh ? 'Chính' : 'Phụ'}
-</Text>
-
-
-                    <View style={styles.buttonRow}>
-                      <TouchableOpacity onPress={() => setEditIndex(index)} style={styles.editBtn}>
-                        <Text style={styles.btnText}>Sửa</Text>
+          {/* Danh sách địa chỉ */}
+          <ScrollView style={{ flex: 1, marginTop: 10 }}>
+            {loading ? <Text>Đang tải...</Text> :
+              list.map((item, index) => (
+                <View key={item._id || index.toString()} style={styles.card}>
+                  {editIndex === index ? (
+                    <>
+                      <TextInput
+                        value={item.diachi}
+                        onChangeText={text => handleInputChange(index, 'diachi', text)}
+                        style={styles.input}
+                      />
+                      <View style={styles.radioRow}>
+                        <TouchableOpacity
+                          style={[styles.radioOption, item.macdinh && styles.radioSelected]}
+                          onPress={() => handleInputChange(index, 'macdinh', true)}
+                        >
+                          <Text style={[styles.radioText, item.macdinh && styles.radioTextSelected]}>Địa chỉ chính</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.radioOption, !item.macdinh && styles.radioSelected]}
+                          onPress={() => handleInputChange(index, 'macdinh', false)}
+                        >
+                          <Text style={[styles.radioText, !item.macdinh && styles.radioTextSelected]}>Địa chỉ phụ</Text>
+                        </TouchableOpacity>
+                      </View>
+                      <TouchableOpacity onPress={() => handleUpdate(index)} style={styles.saveBtn}>
+                        <Text style={styles.btnText}>Lưu</Text>
                       </TouchableOpacity>
-                      <TouchableOpacity onPress={() => handleDelete(item.id)} style={styles.deleteBtn}>
-                        <Text style={styles.btnText}>Xóa</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </>
-                )}
-              </View>
-            ))}
-        </ScrollView>
-
-        <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-          <Text style={styles.btnText}>Đóng</Text>
-        </TouchableOpacity>
+                    </>
+                  ) : (
+                    <>
+                      <Text style={styles.text}><Text style={{ fontWeight: 'bold' }}>Địa chỉ:</Text> {item.diachi}</Text>
+                      <Text style={styles.text}><Text style={{ fontWeight: 'bold' }}>Loại:</Text> {item.macdinh ? 'Chính' : 'Phụ'}</Text>
+                      <View style={styles.buttonRow}>
+                        <TouchableOpacity onPress={() => setEditIndex(index)} style={styles.editBtn}>
+                          <Text style={styles.btnText}>Sửa</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => handleDelete(item.id)} style={styles.deleteBtn}>
+                          <Text style={styles.btnText}>Xóa</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </>
+                  )}
+                </View>
+              ))
+            }
+          </ScrollView>
+        </View>
       </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: '#fff' },
-  title: { fontSize: 22, fontWeight: 'bold', marginBottom: 16 },
-  item: { marginBottom: 12, padding: 10, backgroundColor: '#f0f0f0', borderRadius: 8 },
-  text: { fontSize: 16 },
-  input: { borderWidth: 1, borderColor: '#ccc', padding: 8, marginTop: 5, marginBottom: 5, borderRadius: 5 },
-  buttonRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  editBtn: { backgroundColor: '#007bff', padding: 8, borderRadius: 5, marginRight: 10 },
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', paddingHorizontal: 15 },
+  container: {
+    maxHeight: '85%',
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
+  title: { fontSize: 20, fontWeight: 'bold', color: '#333' },
+  newCard: { padding: 10, backgroundColor: '#e7f3ff', borderRadius: 10, marginBottom: 10 },
+  card: { padding: 12, backgroundColor: '#f9f9f9', borderRadius: 10, marginBottom: 10, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5, elevation: 1 },
+  text: { fontSize: 16, marginBottom: 5, color: '#333' },
+  input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 10, backgroundColor: '#fff', marginBottom: 8 },
+  buttonRow: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 5 },
+  editBtn: { backgroundColor: '#4A6FA5', padding: 8, borderRadius: 5, marginRight: 10 },
   deleteBtn: { backgroundColor: '#dc3545', padding: 8, borderRadius: 5 },
   saveBtn: { backgroundColor: '#28a745', padding: 8, borderRadius: 5, marginTop: 5 },
-  closeBtn: { backgroundColor: '#6c757d', padding: 12, borderRadius: 5, marginTop: 16, alignItems: 'center' },
-  btnText: { color: '#fff', fontWeight: 'bold' },
-  //địa chỉ thêm 
-  radioOption: {
-  flex: 1,
-  padding: 10,
-  marginHorizontal: 5,
-  backgroundColor: '#eee',
-  borderRadius: 5,
-  alignItems: 'center',
-  borderWidth: 1,
-  borderColor: '#ccc',
-},
-radioSelected: {
-  backgroundColor: '#007bff',
-  borderColor: '#007bff',
-},
-radioText: {
-  color: '#000',
-  fontWeight: 'bold',
-},
-
+  addBtn: { backgroundColor: '#007bff', padding: 10, borderRadius: 5, marginTop: 5, alignItems: 'center' },
+  btnText: { color: '#fff', fontWeight: 'bold', textAlign: 'center' },
+  radioRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
+  radioOption: { flex: 1, padding: 10, marginHorizontal: 5, backgroundColor: '#eee', borderRadius: 8, alignItems: 'center', borderWidth: 1, borderColor: '#ccc' },
+  radioSelected: { backgroundColor: '#4A6FA5', borderColor: '#4A6FA5' },
+  radioText: { fontWeight: 'bold', color: '#000' },
+  radioTextSelected: { color: '#fff' },
 });
