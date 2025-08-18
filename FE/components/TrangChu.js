@@ -9,284 +9,183 @@ import {
   StyleSheet,
   TextInput,
   ToastAndroid,
+  RefreshControl,
   Linking,
-  RefreshControl
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { fetchDanhMuc, fetchSanPham } from '../service/api';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/Auth';
-
 
 const TrangChu = ({ navigation }) => {
   const [danhmuc, setDanhmuc] = useState([]);
   const [sanpham, setSanpham] = useState([]);
-  // const [filteredSanPham, setFilteredSanPham] = useState([]);
-  // const [search, setSearch] = useState('');
-  const { addToCart } = useCart();
-  const { token } = useAuth();
-  // const [soluong, setSoluong] = useState(1);
   const [soluongs, setSoluongs] = useState({});
   const [showModal, setShowModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
-  const [selectedProductId, setSelectedProductId] = useState(null);
-
   const [refreshing, setRefreshing] = useState(false);
 
+  const { addToCart } = useCart();
+  const { token } = useAuth();
 
   const fetchData = async () => {
     setRefreshing(true);
     try {
       const danhmucRes = await fetchDanhMuc('', token);
-      setDanhmuc(danhmucRes);
-
       const sanphamRes = await fetchSanPham(token, '');
+      setDanhmuc(danhmucRes);
       setSanpham(sanphamRes);
-
     } catch (err) {
-      console.error('Lỗi khi load dữ liệu:', err.response?.data || err.message);
+      console.error(err);
     }
     setRefreshing(false);
   };
 
-  useEffect(() => {
-    if (token) {
-      fetchData();
-    }
-  }, [token]);
+  useEffect(() => { if (token) fetchData(); }, [token]);
 
-
-
-  // hàm xử lý khi user tăng số lượng sp
-  const handleIncrease = (productId, tonKho) => {
-    setSoluongs((prev) => {
-      const current = prev[productId] || 1;
-      if (current < tonKho) {
-        return { ...prev, [productId]: current + 1 };
-      }
+  const handleIncrease = (id, max) => {
+    setSoluongs(prev => {
+      const current = prev[id] || 1;
+      if (current < max) return { ...prev, [id]: current + 1 };
       ToastAndroid.show("Vượt quá tồn kho!", ToastAndroid.SHORT);
       return prev;
     });
   };
 
-  //hàm giảm số lượng sp
-  const handleDecrease = (productId) => {
-    setSoluongs((prev) => {
-      const current = prev[productId] || 1;
-      return { ...prev, [productId]: Math.max(current - 1, 1) };
+  const handleDecrease = (id) => {
+    setSoluongs(prev => {
+      const current = prev[id] || 1;
+      return { ...prev, [id]: Math.max(current - 1, 1) };
     });
   };
 
-  // hàm xác nhận khi user thêm sp vào giỏ vì có sử dụng modal
-  const handleConfirmAddToCart = (sp) => {
-    const sl = soluongs[sp.id] || 1;
-    const tonKho = parseInt(sp.soluong);
-
-    if (sl > tonKho) {
-      ToastAndroid.show("Số lượng vượt quá tồn kho!", ToastAndroid.SHORT);
-      return;
-    }
-    // console.log('Add to cart:', sp);
-    addToCart({ ...sp, soluong: sl });
-    ToastAndroid.show(`${sp.ten_san_pham} đã được thêm vào giỏ`, ToastAndroid.SHORT);
-    setSelectedProductId(null); // ẩn lại khung nhập sau khi thêm
-  };
-
-  //thêm sp vào giỏ
   const handleAddToCart = (item) => {
     setSelectedProduct(item);
     setShowModal(true);
-    setSoluongs((prev) => ({
-      ...prev,
-      [item.id]: prev[item.id] || 1,
-    }));
+    setSoluongs(prev => ({ ...prev, [item.id]: prev[item.id] || 1 }));
   };
 
-
-  // hàm xử lý số lượng khi nhập tay 
-  const handleChangeSoluong = (text, productId, max) => {
-    const newValue = parseInt(text);
-
-    if (!text || isNaN(newValue) || newValue <= 0) {
-      setSoluongs((prev) => ({
-        ...prev,
-        [productId]: '',
-      }));
+  const handleConfirmAddToCart = (sp) => {
+    const sl = soluongs[sp.id] || 1;
+    if (sl > sp.soluong) {
+      ToastAndroid.show("Số lượng vượt quá tồn kho!", ToastAndroid.SHORT);
       return;
     }
-
-    if (newValue > max) {
-      ToastAndroid.show('Thông báo', `Số lượng vượt quá tồn kho! (Tối đa: ${max})`), ToastAndroid.SHORT;
-      setSoluongs((prev) => ({
-        ...prev,
-        [productId]: max,
-      }));
-    } else {
-      setSoluongs((prev) => ({
-        ...prev,
-        [productId]: newValue,
-      }));
-    }
+    addToCart({ ...sp, soluong: sl });
+    ToastAndroid.show(`${sp.ten_san_pham} đã thêm vào giỏ`, ToastAndroid.SHORT);
+    setShowModal(false);
   };
 
-  const handleSelectDanhMuc = (selectedDanhMuc) => {
-    navigation.navigate('Danh mục sản phẩm', { danhMucId: selectedDanhMuc.id, ten: selectedDanhMuc.ten });
+  const handleSelectDanhMuc = (dm) => {
+    navigation.navigate('Danh mục sản phẩm', { danhMucId: dm.id, ten: dm.ten });
   };
 
-  // điều hướng qua đặt hàng với item và số lượng đã chọn
   const handleOrderNow = (sp) => {
-    // điều hướng qua màn hình Đặt hàng với sản phẩm đã chọn
-    navigation.navigate("Đặt hàng", {
-      sp: sp, // giữ nguyên sản phẩm, không chỉnh sửa 'soluong'
-    });
+    navigation.navigate("Đặt hàng", { sp });
   };
-  const handleSearch = () => {
-    ToastAndroid.show("Tính năng này sẽ được phát triển sau", ToastAndroid.SHORT);
-  }
-
 
   return (
     <View style={styles.container}>
+      {/* // HEADER + SEARCH + DANH MỤC */}
       <View style={styles.header}>
-        <Text style={styles.title}>Trang Chủ</Text>
+        <Text style={styles.title}>AnTiiCo</Text>
         <View style={styles.iconGroup}>
           <TouchableOpacity onPress={() => navigation.navigate("Thông báo")}>
             <Ionicons name="notifications-outline" size={24} color="#000" />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => navigation.navigate("Tài khoản")}>
-            <Ionicons name="person-circle-outline" size={26} color="#000" style={{ marginLeft: 10 }} />
+            <Ionicons name="person-circle-outline" size={26} color="#000" style={{ marginLeft: 12 }} />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => navigation.navigate("Chatbot")}>
-            <Ionicons name="chatbubbles-outline" size={24} color="#000" style={{ marginLeft: 10 }} />
+            <Ionicons name="chatbubbles-outline" size={24} color="#000" style={{ marginLeft: 12 }} />
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* SEARCH BAR */}
       <View style={styles.searchWrapper}>
-        <View style={styles.searchBox}>
-          <Ionicons name="search" size={20} color="#888" />
-          <TextInput
-            placeholder="Tìm sản phẩm, danh mục..."
-            style={styles.searchInput}
-          />
-        </View>
+        <Ionicons name="search" size={20} color="#888" style={{ marginLeft: 15 }} />
+        <TextInput placeholder="Tìm sản phẩm, danh mục..." style={styles.searchInput} />
       </View>
-      {/* DANH MỤC - lướt ngang */}
-      <Text style={styles.heading}>Danh mục</Text>
-      <FlatList
-        horizontal
-        data={danhmuc}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.categoryButton}
-            onPress={() => handleSelectDanhMuc(item)}
-          >
-             <View style={{ justifyContent: 'center', alignItems: 'center' }}>
-            <Text style={styles.categoryText}>{item.ten}</Text>
-            </View>
-          </TouchableOpacity>
 
-        )}
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingRight: 10, paddingBottom: 15 }} // thêm paddingBottom ở đây
-        style={{ marginBottom: 15 }} // hoặc thêm marginBottom ở đây để tách hẳn FlatList danh mục và sản phẩm
-      />
+      <View style={{ marginBottom: 10 }}>
+        <FlatList
+          horizontal
+          data={danhmuc}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={({ item }) => (
+            <TouchableOpacity style={styles.categoryButton} onPress={() => handleSelectDanhMuc(item)}>
+              <Text style={styles.categoryText}>{item.ten}</Text>
+            </TouchableOpacity>
+          )}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 10 }}
+        />
+      </View>
 
-      {/* SẢN PHẨM - lưới 2 cột, lướt dọc */}
-      <Text style={[styles.heading, { marginTop: 10 , }]}>Sản phẩm</Text>
+      {/* SẢN PHẨM */}
       <FlatList
         data={sanpham}
         keyExtractor={(item) => item.id.toString()}
         numColumns={2}
-        columnWrapperStyle={{ justifyContent: 'space-between' }}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={fetchData} />
-        }
+        columnWrapperStyle={{ justifyContent: 'space-between', marginBottom: 15 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={fetchData} />}
+        contentContainerStyle={{ paddingHorizontal: 10, paddingBottom: 20 }}
         renderItem={({ item: sp }) => (
           <View style={styles.productCard}>
-            <Image
-              source={{ uri: sp.anh_dai_dien || 'https://via.placeholder.com/150' }}
-              style={styles.productImage}
-            />
+            <Image source={{ uri: sp.anh_dai_dien || 'https://via.placeholder.com/150' }} style={styles.productImage} />
             <Text style={styles.productName} numberOfLines={2}>{sp.ten_san_pham}</Text>
             <Text style={styles.productPrice}>{parseInt(sp.gia).toLocaleString()}₫</Text>
-            <Text style={styles.quantityInput}>Tồn kho: {sp.soluong}</Text>
-
+            <Text style={styles.quantityText}>Tồn kho: {sp.soluong}</Text>
             <View style={styles.buttonGroup}>
-              <TouchableOpacity style={styles.cartButton} onPress={() => handleAddToCart(sp)}>
-                <Text style={styles.buttonText}>Thêm</Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                <TouchableOpacity style={styles.cartButton} onPress={() => handleAddToCart(sp)}>
+                  <Text style={styles.buttonText}>Thêm</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.orderButton} onPress={() => handleOrderNow(sp)}>
+                  <Text style={styles.buttonText}>Mua</Text>
+                </TouchableOpacity>
+              </View>
+              <TouchableOpacity style={styles.detailButton} onPress={() => navigation.navigate("Chi tiết sản phẩm", { item: sp })}>
+                <Text style={styles.detailText}>Chi tiết</Text>
               </TouchableOpacity>
-
-              <TouchableOpacity style={styles.orderButton} onPress={() => handleOrderNow(sp)}>
-                <Text style={styles.buttonText}>Mua</Text>
-              </TouchableOpacity>
-
             </View>
-            <TouchableOpacity
-              style={styles.detailButton}
-              onPress={() => navigation.navigate("Chi tiết sản phẩm", { item: sp })}
-
-            >
-              <Text style={styles.detailText}>Chi tiết</Text>
-            </TouchableOpacity>
 
           </View>
         )}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.productsWrapper}
       />
-      <Modal
-        visible={showModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowModal(false)}
-      >
+
+      {/* MODAL */}
+      <Modal visible={showModal} transparent animationType="fade" onRequestClose={() => setShowModal(false)}>
         <View style={styles.overlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Chọn số lượng</Text>
-
             {selectedProduct && (
               <>
-                <Text style={styles.productName}>{selectedProduct.ten_san_pham}</Text>
-                <Text style={styles.productPrice}>Tồn kho: {selectedProduct.soluong}</Text>
-
+                <Text style={styles.modalTitle}>{selectedProduct.ten_san_pham}</Text>
+                <Text style={{ marginBottom: 10 }}>Tồn kho: {selectedProduct.soluong}</Text>
                 <View style={styles.quantityRow}>
                   <TouchableOpacity onPress={() => handleDecrease(selectedProduct.id)}>
-                    <Ionicons name="remove-circle-outline" size={32} />
+                    <Ionicons name="remove-circle-outline" size={36} color="#FF9800" />
                   </TouchableOpacity>
-
                   <TextInput
                     style={styles.quantityInput}
                     keyboardType="numeric"
-                    value={soluongs[selectedProduct.id]?.toString() ?? ''}
-                    onChangeText={(text) =>
-                      handleChangeSoluong(text, selectedProduct.id, selectedProduct.soluong)
-                    }
+                    value={soluongs[selectedProduct.id]?.toString() || '1'}
+                    onChangeText={(text) => {
+                      let val = parseInt(text);
+                      if (isNaN(val) || val < 1) val = 1;
+                      if (val > selectedProduct.soluong) val = selectedProduct.soluong;
+                      setSoluongs(prev => ({ ...prev, [selectedProduct.id]: val }));
+                    }}
                   />
-
-
                   <TouchableOpacity onPress={() => handleIncrease(selectedProduct.id, selectedProduct.soluong)}>
-                    <Ionicons name="add-circle-outline" size={32} />
+                    <Ionicons name="add-circle-outline" size={36} color="#4CAF50" />
                   </TouchableOpacity>
                 </View>
-
                 <View style={styles.modalButtons}>
-                  <TouchableOpacity
-                    style={styles.confirmButton}
-                    onPress={() => {
-                      handleConfirmAddToCart(selectedProduct);
-                      setShowModal(false);
-                    }}
-                  >
+                  <TouchableOpacity style={styles.confirmButton} onPress={() => handleConfirmAddToCart(selectedProduct)}>
                     <Text style={styles.buttonText}>OK</Text>
                   </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[styles.confirmButton, { backgroundColor: '#999' }]}
-                    onPress={() => setShowModal(false)}
-                  >
+                  <TouchableOpacity style={[styles.confirmButton, { backgroundColor: '#999' }]} onPress={() => setShowModal(false)}>
                     <Text style={styles.buttonText}>Hủy</Text>
                   </TouchableOpacity>
                 </View>
@@ -296,435 +195,104 @@ const TrangChu = ({ navigation }) => {
         </View>
       </Modal>
       <View style={styles.floatingContainer}>
-        <TouchableOpacity style={[styles.floatingBtn, { backgroundColor: '#25D366' }]} onPress={() => Linking.openURL('https://zalo.me/0909597886')}>
+        <TouchableOpacity style={[styles.floatingBtn, { backgroundColor: '#3DDC97' }]} onPress={() => Linking.openURL('https://zalo.me/0909597886')}>
           <Ionicons name="chatbubble-ellipses-outline" size={24} color="#fff" />
         </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.floatingBtn, { backgroundColor: '#2196F3', marginTop: 15 }]} onPress={() => Linking.openURL('tel:0909597886')}>
+        <TouchableOpacity style={[styles.floatingBtn, { backgroundColor: '#4DA8F7', marginTop: 15 }]} onPress={() => Linking.openURL('tel:0909597886')}>
           <Ionicons name="call-outline" size={24} color="#fff" />
         </TouchableOpacity>
       </View>
-
-
-
     </View>
-  )
-}
+  );
+};
 
 export default TrangChu;
 
-// const styles = StyleSheet.create({
-//   container: {
-//     flex: 1,
-//     backgroundColor: '#F5F5F5',
-//     paddingHorizontal: 10,
-//     paddingTop: 40,
-//   },
-//   header: {
-//     flexDirection: 'row',
-//     alignItems: 'center',
-//     justifyContent: 'space-between',
-//     marginBottom: 10,
-
-//   },
-//   title: {
-//     fontSize: 24,
-//     fontWeight: 'bold',
-//   },
-//   iconGroup: {
-//     flexDirection: 'row',
-//     alignItems: 'center',
-//   },
-//   searchBar: {
-//     backgroundColor: '#f1f1f1',
-//     borderRadius: 8,
-//     paddingHorizontal: 15,
-//     paddingVertical: 8,
-//     fontSize: 16,
-//     marginBottom: 15,
-//   },
-//   heading: {
-//     fontSize: 18,
-//     fontWeight: 'bold',
-//     marginVertical: 10,
-//   },
-//   categoryButton: {
-//     backgroundColor: '#e0e0e0',
-//     borderRadius: 16,
-//     paddingHorizontal: 20,
-//     paddingVertical: 10,
-//     marginRight: 12,
-//     minWidth: 100,          // thêm minWidth để nút đủ rộng chứa chữ
-//     minHeight: 45,          // chiều cao ổn định
-//     justifyContent: 'center',
-//     alignItems: 'center',
-//   },
-//   categoryText: {
-//     fontSize: 16,
-//     color: '#333',
-//     fontWeight: '600',
-//     textAlign: 'center',
-//   },
-//   productsWrapper: {
-//     paddingBottom: 20,
-//     paddingHorizontal: 5,
-//   },
-
-//   productCard: {
-//     width: '48%',
-//     backgroundColor: '#fff',
-//     borderRadius: 10,
-//     padding: 10,
-//     marginBottom: 39,
-//     elevation: 3,
-//     shadowColor: '#000',
-//     shadowOpacity: 0.1,
-//     shadowOffset: { width: 0, height: 2 },
-//     shadowRadius: 4,
-//   },
-
-//   productImage: {
-//     width: '100%',
-//     height: 120,
-//     borderRadius: 8,
-//     marginBottom: 8,
-//     resizeMode: 'cover',
-//   },
-
-//   productName: {
-//     fontSize: 15,
-//     fontWeight: '600',
-//     textAlign: 'center',
-//     marginBottom: 4,
-//   },
-
-//   productPrice: {
-//     fontSize: 14,
-//     color: '#d32f2f',
-//     marginBottom: 6,
-//     textAlign: 'center',
-//   },
-
-//   quantityInput: {
-//     borderWidth: 1,
-//     borderColor: '#ccc',
-//     borderRadius: 6,
-//     paddingVertical: 5,
-//     paddingHorizontal: 10,
-//     width: 140,
-//     textAlign: 'center',
-//     alignSelf: 'center',
-//     marginBottom: 6,
-//   },
-
-//   buttonGroup: {
-//     flexDirection: 'row',
-//     justifyContent: 'space-between',
-//   },
-
-//   cartButton: {
-//     backgroundColor: '#ffa000',
-//     borderRadius: 6,
-//     paddingVertical: 6,
-//     paddingHorizontal: 10,
-//     flex: 1,
-//     marginRight: 5,
-//     alignItems: 'center',
-//   },
-
-//   orderButton: {
-//     backgroundColor: '#4caf50',
-//     borderRadius: 6,
-//     paddingVertical: 6,
-//     paddingHorizontal: 10,
-//     flex: 1,
-//     alignItems: 'center',
-//   },
-
-
-
-//   detailButton: {
-//     backgroundColor: '#2196f3',
-//     borderRadius: 6,
-//     marginTop: 6,
-//     paddingVertical: 6,
-//     alignItems: 'center',
-//   },
-
-//   overlay: {
-//     flex: 1,
-//     backgroundColor: 'rgba(0,0,0,0.4)',
-//     justifyContent: 'center',
-//     alignItems: 'center',
-//   },
-//   modalContent: {
-//     backgroundColor: 'white',
-//     padding: 20,
-//     borderRadius: 10,
-//     alignItems: 'center',
-//     justifyContent: 'center', // hoặc 'space-between' nếu bạn muốn nút OK nằm dưới
-//     width: '80%',
-//     maxHeight: '80%',
-//   },
-
-//   modalTitle: {
-//     fontSize: 18,
-//     fontWeight: 'bold',
-//     marginBottom: 10,
-//   },
-//   quantityRow: {
-//     flexDirection: 'row',
-//     alignItems: 'center',
-//     marginVertical: 10,
-//   },
-//   modalButtons: {
-//     marginTop: 20,
-//     flexDirection: 'row',
-//     justifyContent: 'center',
-//   },
-
-//   confirmButton: {
-//     backgroundColor: '#2196F3',
-//     paddingVertical: 10,
-//     paddingHorizontal: 20,
-//     borderRadius: 8,
-//   },
-
-//   buttonText: {
-//     color: '#fff',
-//     fontWeight: 'bold',
-//   },
-
-//   floatingContainer: {
-//     position: 'absolute',
-//     right: 20,
-//     bottom: 20,
-//     alignItems: 'center',
-//   },
-
-//   floatingBtn: {
-//     width: 56,
-//     height: 56,
-//     borderRadius: 28,
-//     justifyContent: 'center',
-//     alignItems: 'center',
-//     elevation: 5,
-//     shadowColor: '#000',
-//     shadowOpacity: 0.3,
-//     shadowRadius: 5,
-//     shadowOffset: { width: 0, height: 3 },
-//   },
-
-
-// });
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F5F5', // nền xám nhạt hiện đại
-    paddingHorizontal: 10,
-    paddingTop: 25,
-  },
+  container: { flex: 1, backgroundColor: '#F3F4F6' },
   header: {
-    backgroundColor: '#bebcbcff',
-    paddingTop: 35, // tạo khoảng cho status bar
+    backgroundColor: '#bcbdbdff',
+    paddingTop: 40,
     paddingBottom: 15,
     paddingHorizontal: 15,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    elevation: 4,
-  
-  },
-  // Search box sẽ nằm ngay dưới header
-  searchWrapper: {
-    paddingHorizontal: 15,
-    // marginTop: -3, // đẩy lên sát header bo góc
-    marginBottom: 12,
-    padding: 10,
-  },
-
-  searchBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 25,
-    paddingHorizontal: 15,
-    height: 42,
+    borderBottomLeftRadius: 15,
+    borderBottomRightRadius: 15,
     elevation: 3,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 3,
+  },
+  title: { fontSize: 22, fontWeight: 'bold', color: '#333' },
+  iconGroup: { flexDirection: 'row', alignItems: 'center' },
+  searchWrapper: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    margin: 15,
+    paddingHorizontal: 15,
+    alignItems: 'center',
+    borderRadius: 25,
+    elevation: 2,
+  },
+  searchInput: { flex: 1, marginLeft: 10, fontSize: 15 },
+  categoryButton: {
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    marginRight: 10,
+    elevation: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  categoryText: { fontSize: 15, fontWeight: '600', color: '#333' },
+  productCard: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    padding: 10,
+    elevation: 2,
+  },
+  productImage: { width: '100%', height: 130, borderRadius: 10, marginBottom: 8 },
+  productName: { fontSize: 15, fontWeight: '600', color: '#333', textAlign: 'center' },
+  productPrice: { fontSize: 14, fontWeight: 'bold', color: '#FF5722', textAlign: 'center', marginTop: 3 },
+  quantityText: { fontSize: 12, color: '#555', textAlign: 'center', marginBottom: 5 },
+  buttonText: { textAlign: 'center', color: '#fff', fontWeight: '600' },
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
+  modalContent: { width: 300, backgroundColor: '#fff', borderRadius: 20, padding: 20, alignItems: 'center' },
+  modalTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 10 },
+  quantityRow: { flexDirection: 'row', alignItems: 'center', marginVertical: 10 },
+  quantityInput: { borderWidth: 1, borderColor: '#ccc', borderRadius: 10, width: 60, height: 40, textAlign: 'center', marginHorizontal: 10, fontSize: 16 },
+  modalButtons: { flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginTop: 15 },
+  confirmButton: { flex: 1, backgroundColor: '#FF9800', paddingVertical: 10, borderRadius: 10, marginHorizontal: 5,  alignItems: 'center', justifyContent: 'center' },
+  searchWrapper: {
+    flexDirection: 'row',
+    backgroundColor: '#f1faee',
+    marginHorizontal: 15,
+    marginTop: 10,
+    marginBottom: 12,
+    paddingHorizontal: 15,
+    alignItems: 'center',
+    borderRadius: 25,
+    elevation: 2,
   },
 
-  searchInput: {
-    flex: 1,
-    fontSize: 15,
-    color: '#333',
-    marginLeft: 8,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#141414ff',
-  },
-  iconGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  heading: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginVertical: 10,
-    color: '#333',
-    marginTop: -3,
-  },
-categoryButton: {
-  backgroundColor: '#fff',
-  borderRadius: 16,
-  height: 55,               // Chiều cao cố định
-  paddingHorizontal: 20,
-  marginRight: 12,
-  borderWidth: 1,
-  borderColor: '#E0E0E0',
-  minWidth: 100,
-  justifyContent: 'center', // Căn giữa dọc
-  alignItems: 'center',     // Căn giữa ngang
-  elevation: 1,
-},
-categoryText: {
-  fontSize: 16,
-  color: '#333',
-  fontWeight: '800',
-  textAlign: 'center',
-  includeFontPadding: false,    // Android: bỏ padding mặc định
-  textAlignVertical: 'center',  // Android: căn giữa vertical
-  lineHeight: 22,               // > fontSize để tránh lẹm
-},
-  productsWrapper: {
-    paddingBottom: 20,
-    paddingHorizontal: 5,
-  },
-  productCard: {
-    width: '48%',
+  categoryButton: {
     backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 10,
-    marginBottom: 20,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
-  },
-  productImage: {
-    width: '100%',
-    height: 120,
-    borderRadius: 8,
-    marginBottom: 8,
-    resizeMode: 'cover',
-  },
-  productName: {
-    fontSize: 15,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginBottom: 4,
-    color: '#333',
-  },
-  productPrice: {
-    fontSize: 14,
-    color: '#D32F2F',
-    fontWeight: 'bold',
-    marginBottom: 6,
-    textAlign: 'center',
-  },
-  quantityInput: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 6,
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    width: 140,
-    textAlign: 'center',
-    alignSelf: 'center',
-    marginBottom: 6,
-    backgroundColor: '#fff',
-  },
-  buttonGroup: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  cartButton: {
-    backgroundColor: '#FF9800',
-    borderRadius: 6,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    flex: 1,
-    marginRight: 5,
-    alignItems: 'center',
-  },
-  orderButton: {
-    backgroundColor: '#4CAF50',
-    borderRadius: 6,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    flex: 1,
-    alignItems: 'center',
-  },
-  detailButton: {
-    backgroundColor: '#1976D2',
-    borderRadius: 6,
-    marginTop: 6,
-    paddingVertical: 6,
-    alignItems: 'center',
-  },
-  detailText: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: 'white',
-    padding: 20,
-    borderRadius: 16,
-    alignItems: 'center',
-    width: '80%',
-    maxHeight: '80%',
-    elevation: 4,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    color: '#333',
-  },
-  quantityRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 10,
-  },
-  modalButtons: {
-    marginTop: 20,
-    flexDirection: 'row',
-    justifyContent: 'center',
-  },
-  confirmButton: {
-    backgroundColor: '#4CAF50',
-    paddingVertical: 10,
+    borderRadius: 15,
     paddingHorizontal: 20,
-    borderRadius: 8,
-    marginHorizontal: 5,
+    paddingVertical: 12,
+    marginRight: 10,
+    elevation: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderColor: '#e0f2f1', // viền nhẹ
   },
-  buttonText: {
-    color: '#fff',
-    fontWeight: 'bold',
+
+  categoryText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#333',
   },
   floatingContainer: {
     position: 'absolute',
@@ -732,16 +300,63 @@ categoryText: {
     bottom: 20,
     alignItems: 'center',
   },
+
   floatingBtn: {
     width: 50,
     height: 50,
     borderRadius: 25,
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 4,
+    elevation: 6,            // nâng cao hơn để nổi bật
     shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,     // hơi đậm để nổi bật
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
   },
+buttonGroup: { marginTop: 8 },
+
+cartButton: { 
+  flex: 1,
+  backgroundColor: '#FFA726',
+  marginRight: 5,
+  borderRadius: 10,
+  paddingVertical: 6,
+  alignItems: 'center',
+  justifyContent: 'center',
+},
+
+orderButton: { 
+  flex: 1,
+  backgroundColor: '#66BB6A',
+  marginLeft: 5,
+  borderRadius: 10,
+  paddingVertical: 6,
+  alignItems: 'center',
+  justifyContent: 'center',
+},
+
+detailButton: {
+  marginTop: 6,
+  borderWidth: 1,
+  borderColor: '#4DA8F7',
+  borderRadius: 8,
+  paddingVertical: 5,
+  alignItems: 'center',
+  justifyContent: 'center',
+},
+
+
+  buttonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14
+  },
+
+  detailText: {
+    color: '#4DA8F7',
+    fontWeight: '600',
+    fontSize: 13,
+  },
+
+
 });

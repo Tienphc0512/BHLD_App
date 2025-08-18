@@ -292,6 +292,23 @@ export async function fetchOrderHistory(token) {
   }
 }
 
+//api timeline trạng thái đơn 
+export async function fetchOrderTimeline(orderId, token) {
+  try {
+    const response = await axios.get(`${BASE_URL}/api/lich_su_dat_hang/${orderId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    return response.data;
+  } catch (error) {
+    if (error.response && error.response.data) {
+      throw new Error(error.response.data.error || 'Lấy timeline đơn hàng thất bại');
+    } else {
+      throw new Error('Không thể kết nối đến máy chủ');
+    }
+  }
+}
 //api đặt hàng
 export async function placeOrder(orderDetails, token) { 
   try {

@@ -5,11 +5,11 @@ import {
   FlatList,
   ActivityIndicator,
   StyleSheet,
+  TouchableOpacity,
 } from 'react-native';
 import { fetchNotifications } from '../service/api';
 import { useAuth } from '../context/Auth';
 import { useNavigation } from '@react-navigation/native';
-
 
 export default function ThongBao() {
   const [notifications, setNotifications] = useState([]);
@@ -17,7 +17,6 @@ export default function ThongBao() {
   const [error, setError] = useState('');
   const { token } = useAuth();
   const navigation = useNavigation();
-
 
   useEffect(() => {
     async function loadData() {
@@ -33,6 +32,34 @@ export default function ThongBao() {
     }
     loadData();
   }, [token]);
+
+  const renderItem = ({ item }) => {
+    const isCancelled = item.noidung?.toLowerCase().includes('hủy') || item.noidung?.toLowerCase().includes('huỷ');
+
+    return (
+      <TouchableOpacity
+        style={[styles.item, isCancelled && styles.cancelledItem]}
+        onPress={() => {
+          if (isCancelled) {
+            navigation.navigate('Lịch sử hủy', { dathangId: item.dathang_id });
+          } else {
+            navigation.navigate('Đơn hàng', { dathangId: item.dathang_id });
+          }
+        }}
+      >
+        <View style={styles.itemHeader}>
+          <View style={styles.dot} />
+          <Text style={styles.noidung} numberOfLines={2}>
+            {item.noidung || 'Không có nội dung'}
+          </Text>
+        </View>
+        <Text style={styles.date}>
+          {item.created_at ? new Date(item.created_at).toLocaleString('vi-VN') : ''}
+        </Text>
+        <Text style={styles.linkText}>Xem chi tiết</Text>
+      </TouchableOpacity>
+    );
+  };
 
   if (loading) {
     return (
@@ -61,35 +88,11 @@ export default function ThongBao() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>Thông báo</Text>
       <FlatList
         data={notifications}
         keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
-        renderItem={({ item }) => (
-          <View style={styles.item}>
-            {/* <Text style={styles.title}>{item.noidung || 'Không có tiêu đề'}</Text> */}
-            <Text>{item.noidung || ''}</Text>
-            {/* Hiển thị ngày giờ */}
-            <Text style={styles.date}>
-              {item.created_at
-                ? new Date(item.created_at).toLocaleString('vi-VN')
-                : ''}
-            </Text>
-            <Text
-              style={styles.linkText}
-              onPress={() => {
-                if (item.noidung?.toLowerCase().includes('hủy') || item.noidung?.toLowerCase().includes('huỷ')) {
-                  navigation.navigate('Lịch sử hủy', { dathangId: item.dathang_id });
-                } else {
-                  navigation.navigate('Theo dõi đơn', { dathangId: item.dathang_id });
-                }
-              }}
-            >
-              Xem chi tiết
-            </Text>
-
-          </View>
-        )}
+        renderItem={renderItem}
+        contentContainerStyle={{ paddingBottom: 16 }}
       />
     </View>
   );
@@ -98,35 +101,58 @@ export default function ThongBao() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
-    backgroundColor: '#fff',
+    backgroundColor: '#f4f6f8',
+    paddingHorizontal: 16,
+    paddingTop: 16,
   },
   centered: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  header: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 12,
-  },
+
   item: {
-    padding: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-    marginBottom: 8,
-    borderRadius: 6,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: '#fff',
+    padding: 14,
+    borderRadius: 10,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
-  title: {
-    fontWeight: 'bold',
-    fontSize: 16,
+  cancelledItem: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#e74c3c',
+  },
+  itemHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 6,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#007AFF',
+    marginTop: 6,
+    marginRight: 8,
+  },
+  noidung: {
+    fontSize: 15,
+    color: '#2c3e50',
+    flex: 1,
   },
   date: {
     fontSize: 12,
     color: '#999',
+  },
+  linkText: {
     marginTop: 6,
+    color: '#007AFF',
+    fontSize: 13,
+    fontWeight: 'bold',
   },
   errorText: {
     color: 'red',
@@ -134,14 +160,6 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#666',
+    color: '#888',
   },
-  linkText: {
-    marginTop: 6,
-    color: '#007AFF',
-    fontSize: 13,
-    textDecorationLine: 'underline',
-    alignSelf: 'flex-start',
-  },
-
 });

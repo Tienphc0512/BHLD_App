@@ -37,6 +37,14 @@ export const CartProvider = ({ children }) => {
     }
   }, [userId]);
 
+  //lưu lại giỏ hàng khi có thay đổi
+  useEffect(() => {
+  if (userId) {
+    saveCartToStorage(userId, cartItems);
+  }
+}, [cartItems, userId]);
+
+
    // Thêm sản phẩm vào giỏ (nếu trùng thì chỉ tăng số lượng)
   const addToCart = (newItem) => {
     setCartItems((prevItems) => {
@@ -55,12 +63,28 @@ export const CartProvider = ({ children }) => {
     });
   };
 
-  const removeFromCart = (itemId) => {
-    setCartItems((prevItems) => prevItems.filter((item) => item.id !== itemId));
-  };
+  //Mặc dù useEffect trên đã xử lý, nhưng  cũng có thể lưu trực tiếp khi xóa
+const removeFromCart = (itemId) => {
+  setCartItems((prevItems) => {
+    const updatedCart = prevItems.filter((item) => item.id !== itemId);
+    saveCartToStorage(userId, updatedCart);
+    return updatedCart;
+  });
+};
+
+//xóa sp sau khi mua hàng
+const clearCartAfterPurchase = (purchasedItems) => {
+  setCartItems((prevItems) => {
+    const remainingItems = prevItems.filter(
+      (item) => !purchasedItems.some(p => p.id === item.id)
+    );
+    saveCartToStorage(userId, remainingItems);
+    return remainingItems;
+  });
+};
 
   return (
-    <CartContext.Provider value={{ cartItems, addToCart, removeFromCart, loadCartFromStorage, userId  }}>
+    <CartContext.Provider value={{ cartItems, addToCart, removeFromCart, loadCartFromStorage, userId, clearCartAfterPurchase  }}>
       {children}
     </CartContext.Provider>
   );

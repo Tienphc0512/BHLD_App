@@ -19,9 +19,6 @@ import DangKy from "./components/DangKy";
 
 import Chitietsanpham from "./components/Chitietsanpham";
 import Danhmuc from "./components/Danhmucsp";
-// import Sanpham from "./components/Sanpham";
-import LichSuChatBot from "./components/Chatbot/LichSuChatBot";
-import TimKiem from "./components/TimKiem"; 
 import ThongBao from "./components/ThongBao";
 import DonHang from "./components/Order/DatHang";
 import Chatbot from "./components/Chatbot/Chatbot";
@@ -116,18 +113,16 @@ function MainNavigator() {
             options={{ title: "Chi tiết sản phẩm" }}
           />
           <Stack.Screen name="Đặt hàng" component={DonHang} options={{ title: "Đặt hàng" }} />
-          <Stack.Screen name="Lịch Sử Chatbot" component={LichSuChatBot} options={{ title: "Lịch sử chat" }} />
-          <Stack.Screen name="Tìm kiếm" component={TimKiem} options={{ title: "Tìm kiếm" }} />
           <Stack.Screen name="Thông báo" component={ThongBao} options={{ title: "Thông báo" }} />
+          <Stack.Screen name="Đơn hàng" component={TheodoiDH} options={{ headerShown: false }}/>
           <Stack.Screen name="Chatbot" component={Chatbot} options={{ title: "Chat với AI" }} />
           <Stack.Screen name="Chi tiết sản phẩm" component={Chitietsanpham} options={{ title: "Chi tiết sản phẩm" }} />
           <Stack.Screen name="Tài khoản" component={TaiKhoan} options={{ title: "Thông tin tài khoản" }} />
           <Stack.Screen name="Danh mục sản phẩm" component={Danhmuc} options={({ route }) => ({
     title: route.params?.ten || 'Danh mục',
   })} />
-          <Stack.Screen name="Lịch sử hủy" component={LichsuHuy} options={{ title: "Các Đơn đã hủy" }} />
-          <Stack.Screen name="Theo dõi đơn" component={TheodoiDH} options={{ title: "Theo dõi đơn" }} />
-          <Stack.Screen name="Lịch sử đặt hàng" component={LichSuDatHang} options={{ title: "Các đơn đã đặt" }} />
+          <Stack.Screen name="Lịch sử hủy" component={LichsuHuy} options={{ title: "Lịch sử đơn hàng đã huỷ" }} />
+          <Stack.Screen name="Lịch sử đặt hàng" component={LichSuDatHang} options={{ title: "Lịch sử mua hàng" }} />
         </>
       ) : (
         <>
