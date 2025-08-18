@@ -54,42 +54,43 @@ const GioHang = () => {
 
     const selectedProducts = cartItems
       .filter((item) => selectedItems.includes(item.id))
-      .map((item) => ({
-        ...item,
-      }));
+      .map((item) => ({ ...item }));
 
     navigation.navigate("Đặt hàng", { selectedProducts, token });
   };
 
   const renderItem = ({ item }) => (
-    <View style={styles.itemContainer}>
-      <Checkbox
-        value={selectedItems.includes(item.id)}
-        onValueChange={() => toggleSelect(item.id)}
-        style={styles.checkbox}
-      />
-      <View style={{ flex: 1 }}>
-        <Text style={styles.itemName}>
-          {item.ten} {item.ten_san_pham}
-        </Text>
-        <Text>Số lượng: {item.soluong}</Text>
-        <Text>Giá: {parseInt(item.gia).toLocaleString()} VNĐ</Text>
+    <View style={styles.card}>
+      <View style={styles.cardTop}>
+        <Checkbox
+          value={selectedItems.includes(item.id)}
+          onValueChange={() => toggleSelect(item.id)}
+          style={styles.checkbox}
+        />
+        <View style={{ flex: 1 }}>
+          <Text style={styles.itemName}>{item.ten} {item.ten_san_pham}</Text>
+          <Text style={styles.itemDetail}>Số lượng: {item.soluong}</Text>
+          <Text style={styles.itemDetail}>Giá: {parseInt(item.gia).toLocaleString()} VNĐ</Text>
+        </View>
       </View>
     </View>
   );
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Giỏ hàng của bạn</Text>
+      <Text style={styles.title}>Giỏ hàng</Text>
+
       {cartItems.length === 0 ? (
-        <Text>Chưa có sản phẩm nào trong giỏ hàng.</Text>
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>Chưa có sản phẩm nào trong giỏ hàng.</Text>
+        </View>
       ) : (
         <>
           <FlatList
             data={cartItems}
             keyExtractor={(item, index) => `${item.id}-${index}`}
             renderItem={renderItem}
-            contentContainerStyle={{ paddingBottom: 20 }}
+            contentContainerStyle={{ paddingBottom: 100 }}
             refreshControl={
               <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
             }
@@ -105,21 +106,20 @@ const GioHang = () => {
                     }
                   }}
                 />
-                <Text style={{ marginLeft: 8 }}>Chọn tất cả</Text>
+                <Text style={{ marginLeft: 8, fontWeight: "600" }}>Chọn tất cả</Text>
               </View>
             }
           />
 
           <View style={styles.actionButtons}>
             <TouchableOpacity
-              style={[styles.deleteBtn, { flex: 1, marginRight: 8 }]}
+              style={[styles.deleteBtn]}
               onPress={async () => {
                 if (selectedItems.length === 0) {
                   ToastAndroid.show(
                     "Vui lòng chọn ít nhất 1 sản phẩm để xoá.",
                     ToastAndroid.SHORT
                   );
-
                   return;
                 }
 
@@ -147,7 +147,7 @@ const GioHang = () => {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.orderBtn, { flex: 1 }]}
+              style={[styles.orderBtn]}
               onPress={handlePlaceOrder}
               disabled={isPlacingOrder}
             >
@@ -165,64 +165,52 @@ const GioHang = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: "#fff" },
-  title: { fontSize: 20, fontWeight: "bold", marginBottom: 16 },
-  itemContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
+  container: { flex: 1, backgroundColor: "#F5F7FA", paddingHorizontal: 16, paddingTop: 16 },
+  title: { fontSize: 22, fontWeight: "bold", marginBottom: 16, color: "#333" },
+  card: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
     padding: 12,
     marginBottom: 12,
-    backgroundColor: "#fafafa",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  itemName: { fontWeight: "bold", fontSize: 16, marginBottom: 4 },
-  checkbox: {
-    marginRight: 12,
-  },
-  orderBtnText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
+  cardTop: { flexDirection: "row", alignItems: "center" },
+  itemName: { fontWeight: "bold", fontSize: 16, color: "#222", marginBottom: 4 },
+  itemDetail: { fontSize: 14, color: "#555" },
+  checkbox: { marginRight: 12 },
+  selectAllContainer: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
+  actionButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 10,
+    paddingBottom: 20,
   },
   deleteBtn: {
     flex: 1,
+    backgroundColor: "#fff",
     borderWidth: 1,
     borderColor: "#f44336",
-    paddingVertical: 15,
-    paddingHorizontal: 10,
+    paddingVertical: 14,
     borderRadius: 8,
     alignItems: "center",
-    justifyContent: "center",
-    marginRight: 8,      // khoảng cách giữa 2 nút
+    marginRight: 10,
   },
-
-  deleteBtnText: {
-    color: "#f44336",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-
+  deleteBtnText: { color: "#f44336", fontWeight: "bold", fontSize: 16 },
   orderBtn: {
     flex: 1,
     backgroundColor: "#2196F3",
-    paddingVertical: 15,
-    paddingHorizontal: 16,
+    paddingVertical: 14,
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
   },
-  selectAllContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  actionButtons: {
-    flexDirection: "row",
-    marginTop: 10,       // thêm marginTop cho khoảng cách với nội dung trên
-    alignItems: "center" // căn chỉnh nút theo chiều dọc
-  },
+  orderBtnText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
+  emptyContainer: { flex: 1, justifyContent: "center", alignItems: "center", marginTop: 50 },
+  emptyText: { fontSize: 16, color: "#888" },
 });
 
 export default GioHang;

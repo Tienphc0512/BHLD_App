@@ -39,6 +39,15 @@ export default function TheodoiDH() {
     }
   }, [userId]);
 
+  const initialTab = orderInfo
+  ? orderInfo.trangthai === 'choxuly' ? 'Chờ xử lý' :
+    orderInfo.trangthai === 'danggiao' ? 'Đang giao' :
+    orderInfo.trangthai === 'hoanthanh' ? 'Đã giao' :
+    orderInfo.trangthai === 'dahuy' ? 'Đã huỷ' :
+    'Tất cả'
+  : 'Tất cả';
+
+
   if (loading) {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
@@ -49,6 +58,7 @@ export default function TheodoiDH() {
 
   return (
     <Tab.Navigator
+    initialRouteName={initialTab}
  screenOptions={{
   tabBarScrollEnabled: true,
     tabBarStyle: {
