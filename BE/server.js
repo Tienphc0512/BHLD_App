@@ -399,108 +399,76 @@ app.post("/api/dat_hang", verifyToken, async (req, res) => {
   const user_id = req.userId;
 
   try {
+    // Tạo đơn hàng
     const result = await pool.query(
       `INSERT INTO dathang (user_id, ngaydat, trangthai, tongtien, hinhthuc_thanhtoan, diachi_id)
-       VALUES ($1, NOW(), 'choxuly', $2, 'cod', $3) RETURNING id`,
+       VALUES ($1, NOW(), 'choxuly', $2, 'cod', $3) RETURNING *`,
       [user_id, tongtien, diachi_id]
     );
 
-    const dathang_id = result.rows[0].id;
+    const order = result.rows[0];
+    const dathang_id = order.id;
 
-// Thêm chi tiết đơn hàng
-for (const item of items) {
-  console.log(">> Insert chi tiết:", item); 
-  await pool.query(
-    "INSERT INTO chitietdathang (dathang_id, sanpham_id, soluong, dongia) VALUES ($1, $2, $3, $4)",
-    [dathang_id, item.sanpham_id, item.soluong, item.dongia]
-  );
-}
+    // Thêm chi tiết đơn hàng
+    for (const item of items) {
+      await pool.query(
+        "INSERT INTO chitietdathang (dathang_id, sanpham_id, soluong, dongia) VALUES ($1, $2, $3, $4)",
+        [dathang_id, item.sanpham_id, item.soluong, item.dongia]
+      );
+    }
 
-// Trừ số lượng sản phẩm trong kho
-for (const item of items) {
-  // Kiểm tra sản phẩm có đủ số lượng hay không
-  const checkResult = await pool.query(
-    "SELECT soluong FROM sanpham WHERE id = $1",
-    [item.sanpham_id]
-  );
+    // Trừ kho
+    for (const item of items) {
+      const checkResult = await pool.query(
+        "SELECT soluong FROM sanpham WHERE id = $1",
+        [item.sanpham_id]
+      );
+      const soluongTrongKho = checkResult.rows[0]?.soluong ?? 0;
 
-  const soluongTrongKho = checkResult.rows[0]?.soluong ?? 0;
+      if (soluongTrongKho < item.soluong) {
+        return res.status(400).json({
+          error: `Sản phẩm ${item.sanpham_id} không đủ hàng trong kho`,
+        });
+      }
 
-  if (soluongTrongKho < item.soluong) {
-    return res.status(400).json({ error: `Sản phẩm ${item.sanpham_id} không đủ hàng trong kho` });
-  }
+      await pool.query(
+        "UPDATE sanpham SET soluong = soluong - $1 WHERE id = $2",
+        [item.soluong, item.sanpham_id]
+      );
+    }
 
-  // Trừ kho
-  await pool.query(
-    "UPDATE sanpham SET soluong = soluong - $1 WHERE id = $2",
-    [item.soluong, item.sanpham_id]
-  );
-}
+    // Gửi thông báo
+    await pool.query(
+      "INSERT INTO thongbao (user_id, dathang_id, noidung) VALUES ($1, $2, $3)",
+      [user_id, dathang_id, `Bạn đã đặt hàng thành công. Mã đơn hàng: #${dathang_id}`]
+    );
 
-// Gửi thông báo đặt hàng
-await pool.query(
-  "INSERT INTO thongbao (user_id, dathang_id, noidung) VALUES ($1, $2, $3)",
-  [user_id, dathang_id, `Bạn đã đặt hàng thành công. Mã đơn hàng: #${dathang_id}`]
-);
+    // Lấy chi tiết sản phẩm của đơn hàng vừa đặt
+    const details = await pool.query(
+      `SELECT ct.sanpham_id, 
+      sp.ten AS ten_san_pham, 
+      ct.soluong, ct.dongia
+       FROM chitietdathang ct
+       JOIN sanpham sp ON ct.sanpham_id = sp.id
+       WHERE ct.dathang_id = $1`,
+      [dathang_id]
+    );
 
-    res.status(201).json({ message: "Đặt hàng thành công", dathang_id });
+    // Trả về cả order + items
+    res.status(201).json({
+      message: "Đặt hàng thành công",
+      order: {
+        ...order,
+        items: details.rows,
+      },
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Lỗi khi đặt hàng" });
   }
 });
 
-// // Tạo hàm dùng lại cho mọi tình huống
-// async function taoThongBaoTrangThai(dathang_id, user_id, trangthai) {
-//   let noidung = '';
 
-//   switch (trangthai) {
-//     case 'danggiao':
-//       noidung = `Đơn hàng #${dathang_id} đang được giao đến bạn.`;
-//       break;
-//     case 'hoanthanh':
-//       noidung = `Đơn hàng #${dathang_id} đã hoàn thành. Cảm ơn bạn!`;
-//       break;
-//     case 'dahuy':
-//       noidung = `Đơn hàng #${dathang_id} đã bị huỷ.`;
-//       break;
-//     default:
-//       return; // không gửi thông báo cho trạng thái khác
-//   }
-
-//   await pool.query(
-//     "INSERT INTO thongbao (user_id, dathang_id, noidung) VALUES ($1, $2, $3)",
-//     [user_id, dathang_id, noidung]
-//   );
-// }
-
-// // api cập nhật trạng thái đơn hàng
-// app.put("/api/donhang/:id/trangthai", verifyToken, async (req, res) => {
-//   const dathang_id = req.params.id;
-//   const { trangthai } = req.body;
-
-//   try {
-//     // Cập nhật trạng thái đơn hàng
-//     const result = await pool.query(
-//       "UPDATE dathang SET trangthai = $1 WHERE id = $2 RETURNING user_id",
-//       [trangthai, dathang_id]
-//     );
-
-//     if (result.rows.length === 0) {
-//       return res.status(404).json({ error: "Không tìm thấy đơn hàng" });
-//     }
-
-//     const user_id = result.rows[0].user_id;
-
-//     // Tạo thông báo tương ứng
-//     await taoThongBaoTrangThai(dathang_id, user_id, trangthai);
-
-//     res.json({ message: "Cập nhật trạng thái thành công" });
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ error: "Lỗi cập nhật trạng thái đơn hàng" });
-//   }
-// });
 
 // api huỷ đơn hàng
 app.delete("/api/huy_don_hang/:id", verifyToken, async (req, res) => {
@@ -651,6 +619,30 @@ ORDER BY dh.ngaydat DESC
   }
 });
 
+
+//xem timeline trạng thái từng đơn hàng
+app.get("/api/lich_su_dat_hang/:dathangId", verifyToken, async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { dathangId } = req.params;
+
+    const result = await pool.query(
+      `SELECT ld.trangthai, ld.thoigian
+       FROM lichsudathang ld
+       JOIN dathang dh ON dh.id = ld.dathang_id
+       WHERE dh.user_id = $1 AND dh.id = $2
+       ORDER BY ld.thoigian ASC`,
+      [userId, dathangId]
+    );
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Lỗi khi lấy chi tiết lịch sử đơn hàng" });
+  }
+});
+
+// xem lịch sử đặt hàng
 app.get("/api/lich_su_dat_hang", verifyToken, async (req, res) => {
   try {
     const userId = req.userId;
@@ -669,7 +661,7 @@ app.get("/api/lich_su_dat_hang", verifyToken, async (req, res) => {
        JOIN diachi d ON d.user_id = u.id AND d.macdinh = true
        WHERE dh.user_id = $1
          AND ld.trangthai = 'hoanthanh'
-       ORDER BY dh.ngaydat DESC`,
+       ORDER BY dh.ngaydat DESC, ld.thoigian ASC`,
       [userId]
     );
 
