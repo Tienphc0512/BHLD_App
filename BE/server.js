@@ -474,6 +474,7 @@ app.post("/api/dat_hang", verifyToken, async (req, res) => {
 app.delete("/api/huy_don_hang/:id", verifyToken, async (req, res) => {
   const dathang_id = req.params.id;
   const user_id = req.userId;
+  const { lydo } = req.body;
 
   const client = await pool.connect();
   try {
@@ -505,9 +506,9 @@ app.delete("/api/huy_don_hang/:id", verifyToken, async (req, res) => {
 
     // Thêm vào bảng lichsuhuy
     await client.query(
-      `INSERT INTO lichsuhuy (user_id, dathang_id, ngayhuy) 
-       VALUES ($1, $2, NOW())`,
-      [user_id, dathang_id]
+      `INSERT INTO lichsuhuy (user_id, dathang_id, ngayhuy, lydo) 
+       VALUES ($1, $2, NOW(), $3)`,
+      [user_id, dathang_id, lydo || null]
     );
 
     // Kiểm tra nếu không có dòng nào được cập nhật
@@ -627,13 +628,22 @@ app.get("/api/lich_su_dat_hang/:dathangId", verifyToken, async (req, res) => {
     const { dathangId } = req.params;
 
     const result = await pool.query(
-      `SELECT ld.trangthai, ld.thoigian
-       FROM lichsudathang ld
-       JOIN dathang dh ON dh.id = ld.dathang_id
-       WHERE dh.user_id = $1 AND dh.id = $2
-       ORDER BY ld.thoigian ASC`,
-      [userId, dathangId]
-    );
+  `SELECT 
+  CASE 
+    WHEN ld.trangthai::text = 'dangchuanbi' THEN N'Đang chuẩn bị'
+    WHEN ld.trangthai::text = 'danggiao' THEN N'Đang giao'
+    WHEN ld.trangthai::text = 'hoanthanh' THEN N'Hoàn thành'
+    ELSE ld.trangthai::text
+  END AS trangthai,
+  ld.thoigian
+FROM lichsudathang ld
+JOIN dathang dh ON dh.id = ld.dathang_id
+WHERE dh.user_id = $1 AND dh.id = $2
+ORDER BY ld.thoigian ASC
+`,
+  [userId, dathangId]
+);
+
 
     res.json(result.rows);
   } catch (err) {
@@ -686,7 +696,8 @@ app.get('/api/lich_su_huy_don_hang', verifyToken, async (req, res) => {
        dh.tongtien,
        u.username, 
        u.sdt, 
-       d.diachi
+       d.diachi,
+       lh.lydo
 FROM lichsuhuy lh
 JOIN dathang dh ON dh.id = lh.dathang_id
 JOIN chitietdathang ct ON ct.dathang_id = lh.dathang_id
