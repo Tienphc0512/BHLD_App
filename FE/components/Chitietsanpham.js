@@ -9,7 +9,8 @@ import {
   Alert,
   ActivityIndicator,
   TextInput,
-  ToastAndroid
+  ToastAndroid,
+  Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRoute, useNavigation } from '@react-navigation/native';
@@ -17,7 +18,7 @@ import { useCart } from '../context/CartContext';
 import { fetchChiTietSanPham } from '../service/api';
 import { useAuth } from '../context/Auth';
 
-
+const { width } = Dimensions.get('window');
 const DEFAULT_IMAGE = 'https://via.placeholder.com/150';
 
 const ChiTietSanPham = () => {
@@ -28,7 +29,6 @@ const ChiTietSanPham = () => {
   const [soluong, setSoluong] = useState(1);
   const [loading, setLoading] = useState(true);
 
-
   const { token } = useAuth();
   const { addToCart } = useCart();
 
@@ -37,7 +37,6 @@ const ChiTietSanPham = () => {
       try {
         const data = await fetchChiTietSanPham(item.id, token);
         setSanpham(data);
-        console.log(data);
       } catch (err) {
         Alert.alert('Lỗi', err.message);
       } finally {
@@ -49,15 +48,13 @@ const ChiTietSanPham = () => {
 
   const handleIncrease = () => {
     const tonKho = parseInt(sanpham.soluong);
-    const current = parseInt(soluong) || 0; // Nếu rỗng thì coi là 0
-
+    const current = parseInt(soluong) || 0;
     if (current + 1 > tonKho) {
       Alert.alert('Thông báo', 'Số lượng vượt quá tồn kho!');
     } else {
       setSoluong(current + 1);
     }
   };
-
 
   const handleDecrease = () => {
     const current = parseInt(soluong) || 1;
@@ -67,43 +64,35 @@ const ChiTietSanPham = () => {
   const handleAddToCart = (item) => {
     const parsedSoLuong = parseInt(soluong);
     const validatedSoluong = !parsedSoLuong || parsedSoLuong <= 0 ? 1 : parsedSoLuong;
-
     addToCart({ ...item, soluong: validatedSoluong });
     ToastAndroid.show(`${item.ten} đã được thêm vào giỏ`, ToastAndroid.SHORT);
   };
 
-  // hàm xử lý số lượng khi nhập tay
-const handleChangeSoluong = (text, max) => {
-  // Cho phép rỗng để người dùng nhập tiếp
-  if (text.trim() === '') {
-    setSoluong(''); 
-    return;
-  }
-
-  const newValue = parseInt(text);
-  if (isNaN(newValue)) return;
-
-  if (newValue > max) {
-    Alert.alert('Thông báo', `Số lượng vượt quá tồn kho! (Tối đa: ${max})`);
-    setSoluong(max.toString());
-  } else {
-    setSoluong(text);
-  }
-};
-
+  const handleChangeSoluong = (text, max) => {
+    if (text.trim() === '') {
+      setSoluong('');
+      return;
+    }
+    const newValue = parseInt(text);
+    if (isNaN(newValue)) return;
+    if (newValue > max) {
+      Alert.alert('Thông báo', `Số lượng vượt quá tồn kho! (Tối đa: ${max})`);
+      setSoluong(max.toString());
+    } else {
+      setSoluong(text);
+    }
+  };
 
   const handleOrderNow = () => {
-      const parsedSoluong = parseInt(soluong);
-
-  if (!parsedSoluong || parsedSoluong <= 0) {
-    Alert.alert('Lỗi', 'Vui lòng nhập số lượng hợp lệ (ít nhất 1)');
-    return;
-  }
-
-  if (parsedSoluong > parseInt(sanpham.soluong)) {
-    Alert.alert('Lỗi', 'Số lượng vượt quá tồn kho');
-    return;
-  }
+    const parsedSoluong = parseInt(soluong);
+    if (!parsedSoluong || parsedSoluong <= 0) {
+      Alert.alert('Lỗi', 'Vui lòng nhập số lượng hợp lệ (ít nhất 1)');
+      return;
+    }
+    if (parsedSoluong > parseInt(sanpham.soluong)) {
+      Alert.alert('Lỗi', 'Số lượng vượt quá tồn kho');
+      return;
+    }
     navigation.navigate('Đặt hàng', {
       sp: {
         ...sanpham,
@@ -113,7 +102,6 @@ const handleChangeSoluong = (text, max) => {
       },
     });
   };
-
 
   if (loading || !sanpham) {
     return (
@@ -127,128 +115,157 @@ const handleChangeSoluong = (text, max) => {
   const hinhAnhArray = sanpham?.hinhanh?.length > 0 ? sanpham.hinhanh : [sanpham.anh_dai_dien || DEFAULT_IMAGE];
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} style={{ marginBottom: 20 }}>
-        {hinhAnhArray.map((uri, index) => (
-          <Image key={index} source={{ uri }} style={styles.image} />
-        ))}
+    <View style={{ flex: 1, backgroundColor: '#f5f5f5' }}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
+        {/* Ảnh sản phẩm */}
+        <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false}>
+          {hinhAnhArray.map((uri, index) => (
+            <Image key={index} source={{ uri }} style={styles.image} />
+          ))}
+        </ScrollView>
+        <Text style={styles.swipeHint}>← Vuốt để xem thêm ảnh →</Text>
+
+        {/* Thông tin chính */}
+        <View style={styles.box}>
+          <Text style={styles.name}>{sanpham.ten}</Text>
+          <Text style={styles.price}>{parseInt(sanpham.gia).toLocaleString()} đ</Text>
+          <Text style={styles.stock}>Tồn kho: {sanpham.soluong}</Text>
+        </View>
+
+        {/* Mô tả */}
+        <View style={styles.box}>
+          <Text style={styles.sectionTitle}>Mô tả sản phẩm</Text>
+          <Text style={styles.desc}>{sanpham.mota || 'Không có mô tả.'}</Text>
+        </View>
+
+        {/* Số lượng */}
+        <View style={styles.box}>
+          <Text style={styles.sectionTitle}>Số lượng</Text>
+          <View style={styles.quantityContainer}>
+            <TouchableOpacity onPress={handleDecrease}>
+              <Ionicons name="remove-circle-outline" size={36} color="black" />
+            </TouchableOpacity>
+            <TextInput
+              style={styles.quantityInput}
+              keyboardType="numeric"
+              value={soluong.toString()}
+              onChangeText={(text) => handleChangeSoluong(text, sanpham.soluong)}
+            />
+            <TouchableOpacity onPress={handleIncrease}>
+              <Ionicons name="add-circle-outline" size={36} color="black" />
+            </TouchableOpacity>
+          </View>
+        </View>
       </ScrollView>
-      <Text style={styles.swipeHint}>← Vuốt để xem thêm ảnh →</Text>
-      <Text style={styles.name}>{sanpham.ten}</Text>
-      <Text style={styles.price}>{parseInt(sanpham.gia).toLocaleString()} đ</Text>
-      <Text style={styles.desc}>{sanpham.mota || 'Không có mô tả.'}</Text>
-      <Text style={styles.stock}>Tồn kho: {sanpham.soluong}</Text>
 
-      <View style={styles.quantityContainer}>
-        <TouchableOpacity onPress={handleDecrease}>
-          <Ionicons name="remove-circle-outline" size={32} color="black" />
-        </TouchableOpacity>
-        <TextInput
-          style={styles.quantityInput}
-          keyboardType="numeric"
-          value={soluong.toString()}
-          onChangeText={(text) => handleChangeSoluong(text, sanpham.soluong)}
-        />
-
-
-
-        <TouchableOpacity onPress={handleIncrease}>
-          <Ionicons name="add-circle-outline" size={32} color="black" />
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.buttonGroup}>
+      {/* Nút hành động cố định dưới cùng */}
+      <View style={styles.bottomBar}>
         <TouchableOpacity style={styles.cartButton} onPress={() => handleAddToCart(sanpham)}>
           <Text style={styles.buttonText}>Thêm vào giỏ</Text>
         </TouchableOpacity>
-
         <TouchableOpacity style={styles.orderButton} onPress={handleOrderNow}>
-          <Text style={styles.buttonText}>Đặt hàng</Text>
+          <Text style={styles.buttonText}>Mua ngay</Text>
         </TouchableOpacity>
       </View>
-    </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-    alignItems: 'center',
+  image: {
+    width: width,
+    height: width,
+    resizeMode: 'contain',
     backgroundColor: '#fff',
   },
-  image: {
-    width: 300,
-    height: 300,
-    resizeMode: 'contain',
-    borderRadius: 10,
-    marginRight: 10,
+  swipeHint: {
+    textAlign: 'center',
+    color: '#888',
+    marginTop: 6,
+    marginBottom: 12,
+  },
+  box: {
+    backgroundColor: '#fff',
+    padding: 16,
+    marginBottom: 10,
   },
   name: {
     fontSize: 22,
     fontWeight: 'bold',
-    marginBottom: 10,
-    textAlign: 'center',
-  },
-  price: {
-    fontSize: 18,
-    color: '#007BFF',
     marginBottom: 6,
   },
-  desc: {
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 8,
+  price: {
+    fontSize: 20,
+    color: '#d32f2f',
+    fontWeight: 'bold',
+    marginBottom: 4,
   },
   stock: {
     fontSize: 14,
-    color: '#888',
-    marginBottom: 20,
+    color: '#666',
+  },
+  sectionTitle: {
+    fontWeight: 'bold',
+    fontSize: 16,
+    marginBottom: 8,
+  },
+  desc: {
+    fontSize: 15,
+    color: '#333',
+    lineHeight: 22,
   },
   quantityContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
-  },
-  quantity: {
-    fontSize: 20,
-    marginHorizontal: 15,
-  },
-  buttonGroup: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  cartButton: {
-    backgroundColor: '#388e3c',
-    padding: 12,
-    borderRadius: 8,
-    marginRight: 10,
-  },
-  orderButton: {
-    backgroundColor: '#1976d2',
-    padding: 12,
-    borderRadius: 8,
-  },
-  buttonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-  center: {
-    flex: 1,
     justifyContent: 'center',
-    alignItems: 'center',
-    paddingTop: 40,
   },
   quantityInput: {
-    width: 60,
+    width: 70,
     height: 40,
     textAlign: 'center',
     fontSize: 18,
     borderWidth: 1,
     borderColor: '#ccc',
     borderRadius: 8,
-    marginHorizontal: 10,
+    marginHorizontal: 12,
+    backgroundColor: '#fff',
   },
-
+  bottomBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderColor: '#eee',
+    padding: 12,
+  },
+  cartButton: {
+    flex: 1,
+    backgroundColor: '#388e3c',
+    padding: 14,
+    borderRadius: 6,
+    marginRight: 8,
+    alignItems: 'center',
+  },
+  orderButton: {
+    flex: 1,
+    backgroundColor: '#1976d2',
+    padding: 14,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  center: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });
 
 export default ChiTietSanPham;

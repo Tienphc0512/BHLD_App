@@ -3,7 +3,6 @@ import {
   View,
   Text,
   TextInput,
-  Button,
   Alert,
   ScrollView,
   Modal,
@@ -18,7 +17,6 @@ import { useAuth } from '../../context/Auth';
 import { useCart } from '../../context/CartContext';
 import { useNavigation } from '@react-navigation/native';
 
-
 export default function DatHang({ route }) {
   const [orderDetails, setOrderDetails] = useState({
     items: [],
@@ -27,7 +25,6 @@ export default function DatHang({ route }) {
   });
 
   const { token } = useAuth();
-
   const [orderId, setOrderId] = useState('');
   const [orderInfo, setOrderInfo] = useState(null);
   const [message, setMessage] = useState('');
@@ -36,8 +33,6 @@ export default function DatHang({ route }) {
   const [showModal, setShowModal] = useState(false);
   const { sp: selectedItem } = route.params ?? {}; // nếu từ 1 sản phẩm cụ thể
   const { selectedProducts } = route.params ?? {}; // nếu từ giỏ hàng
-  // console.log("Sản phẩm được truyền qua:", selectedProducts);
-
   const [diaChiList, setDiaChiList] = useState([]);
   const [selectedDiaChiId, setSelectedDiaChiId] = useState(null);
   const navigation = useNavigation();
@@ -48,22 +43,21 @@ export default function DatHang({ route }) {
     try {
       const data = await fetchTaiKhoan(token);
       const diachiData = await fetchDiaChi(token);
-      // truyền thông tin user vào state
+
       setUserInfo({
         username: data.username,
         sdt: data.sdt,
       });
-      //thêm địa chỉ vào state
+
       setDiaChiList(diachiData || []);
       const defaultDiaChi = diachiData.find((dc) => dc.macdinh) || diachiData[0];
 
-      // Nếu có selectedProducts (từ giỏ hàng)
       if (selectedProducts && selectedProducts.length > 0) {
-
         const items = selectedProducts.map((item) => ({
           sanpham_id: item.id,
           soluong: item.soluong || 1,
           dongia: item.gia,
+          tonKho: item.tonKho,
         }));
 
         const tongtien = items.reduce((sum, item) => sum + item.soluong * item.dongia, 0);
@@ -73,22 +67,20 @@ export default function DatHang({ route }) {
           tongtien,
           diaChi: defaultDiaChi?.diachi || '',
         });
-
         setSelectedDiaChiId(defaultDiaChi?.id ?? null);
       }
 
-      // Nếu đi từ trang sản phẩm riêng lẻ
       if (selectedItem && !isNaN(selectedItem.soluong)) {
         setOrderDetails({
           items: [{
             sanpham_id: selectedItem.id,
             soluong: 1,
             dongia: selectedItem.gia,
+            tonKho: selectedItem.soluong
           }],
           tongtien: selectedItem.gia,
           diaChi: defaultDiaChi?.diachi || '',
         });
-
         setSelectedDiaChiId(defaultDiaChi?.id ?? null);
       }
     } catch (err) {
@@ -99,14 +91,12 @@ export default function DatHang({ route }) {
 
   useEffect(() => {
     fetchInfoAndInitOrder();
-  }, [selectedItem]); // và phải gọi lại khi selectedItem thay đổi 
-
+  }, [selectedItem]);
 
   const handlePlaceOrder = async () => {
     setLoading(true);
     setMessage('');
 
-    // Kiểm tra tồn kho nếu đi từ giỏ hàng
     if (selectedProducts && selectedProducts.length > 0) {
       for (let i = 0; i < selectedProducts.length; i++) {
         const cartItem = selectedProducts[i];
@@ -119,60 +109,48 @@ export default function DatHang({ route }) {
       }
     }
 
-    // Kiểm tra tồn kho nếu đi từ sản phẩm riêng lẻ (các màn hình khác)
     if (selectedItem && orderDetails.items[0].soluong > selectedItem.soluong) {
       setMessage('Số lượng vượt quá tồn kho!');
       setLoading(false);
       return;
     }
 
-    //ktra xong thì gọi api
     try {
       const data = await placeOrder(
         { ...orderDetails, diachi_id: selectedDiaChiId },
         token
       );
-      console.log("Đặt hàng response:", data);
       const newOrderId = data.dathang_id;
       setOrderId(newOrderId);
       setMessage(`Đặt hàng thành công! Mã đơn hàng: ${newOrderId}`);
 
-      // Xóa các sản phẩm vừa đặt khỏi giỏ hàng
       if (selectedProducts && selectedProducts.length > 0) {
         clearCartAfterPurchase(selectedProducts);
       }
-      //đặt xong thì gọi api chi tiết đơn vừa đặt
+
       try {
         const details = await fetchOrderDetails(newOrderId, token);
         setOrderInfo(details);
-      } catch (err) {
+      } catch {
         Alert.alert("Lỗi", "Không thể tải chi tiết đơn hàng.");
       }
 
     } catch (err) {
-      console.log(">> Lỗi khi đặt hàng:", err);
       setMessage(err.message || "Lỗi không xác định");
     }
     setLoading(false);
   };
 
-
   const handleFetchOrderDetailsWithId = () => {
-    navigation.navigate("Đơn hàng", {
-      orderDetails: {
-
-      }
-    })
+    navigation.navigate("Đơn hàng", { orderDetails: {} });
     setLoading(true);
     setMessage('');
   };
 
-  // hàmh để lưu thông tin khách hàng
   const handleSave = async () => {
     setLoading(true);
     try {
-      const currentData = await fetchTaiKhoan(token); // gọi api Lấy dữ liệu gốc
-
+      const currentData = await fetchTaiKhoan(token);
       await updateTaiKhoan({
         username: userInfo.username,
         sdt: userInfo.sdt,
@@ -195,54 +173,46 @@ export default function DatHang({ route }) {
     }
   };
 
-
   return (
-    <ScrollView contentContainerStyle={{ padding: 20 }}
-      refreshControl={
-        <RefreshControl refreshing={loading} onRefresh={fetchInfoAndInitOrder} />
-      }>
-      {/* <Text style={styles.title}>Đặt Hàng</Text> */}
+    <View style={{ flex: 1 }}>
+      <ScrollView
+        contentContainerStyle={{ padding: 16, paddingBottom: 120 }}
+        refreshControl={
+          <RefreshControl refreshing={loading} onRefresh={fetchInfoAndInitOrder} />
+        }
+      >
+        {/* Thông tin người nhận */}
+        <View style={styles.sectionBox}>
+          <View style={styles.rowBetween}>
+            <Text style={styles.sectionTitle}>Thông tin người nhận</Text>
+            <TouchableOpacity onPress={() => setShowModal(true)}>
+              <Text style={{ color: 'blue' }}>Thay đổi</Text>
+            </TouchableOpacity>
+          </View>
+          <Text>Họ tên: {userInfo.username}</Text>
+          <Text>SĐT: {userInfo.sdt}</Text>
+          <Text>Địa chỉ: {orderDetails.diaChi}</Text>
+        </View>
 
-      <View style={styles.rowBetween}>
-        <Text style={styles.label}>Thông tin khách hàng</Text>
+        {/* Danh sách sản phẩm */}
+        <View style={styles.sectionBox}>
+          <Text style={styles.sectionTitle}>Sản phẩm</Text>
+          {(selectedProducts || [selectedItem]).filter(Boolean).map((item, index) => (
+            <View key={item.id || index} style={styles.productCard}>
+              <Image source={{ uri: item.anh_dai_dien }} style={styles.productImage} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.productName}>{item.ten_san_pham}</Text>
+                <Text>{Number(item.gia).toLocaleString()}đ</Text>
 
-        <TouchableOpacity onPress={() => setShowModal(true)}>
-          <Text style={{ color: 'blue' }}>Chỉnh sửa</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* từ giỏ hàng qua */}
-      {selectedProducts && selectedProducts.length > 0 && (
-        <>
-          {selectedProducts.map((item, index) => {
-            return (
-              <View
-                key={item.id || index}
-                style={{
-                  flexDirection: 'row',
-                  borderWidth: 1,
-                  borderColor: '#ccc',
-                  padding: 10,
-                  borderRadius: 8,
-                  marginBottom: 15,
-                }}
-              >
-                <Image
-                  source={{ uri: item.anh_dai_dien }}
-                  style={{ width: 80, height: 80, marginRight: 10, borderRadius: 8 }}
-                />
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontWeight: 'bold', fontSize: 16 }}>{item.ten_san_pham}</Text>
-                  <Text>Giá: {Number(item.gia).toLocaleString()}đ</Text>
-
-                  {/* Tăng giảm số lượng */}
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 5 }}>
+                {/* tăng giảm số lượng */}
+                {orderDetails.items[index] && (
+                  <View style={styles.qtyRow}>
                     <TouchableOpacity
                       onPress={() => {
                         const newItems = [...orderDetails.items];
                         if (newItems[index].soluong > 1) {
                           newItems[index].soluong -= 1;
-                          const tongtien = newItems.reduce((sum, i) => sum + i.soluong * i.dongia, 0);
+                          const tongtien = newItems.reduce((s, i) => s + i.soluong * i.dongia, 0);
                           setOrderDetails({ ...orderDetails, items: newItems, tongtien });
                         }
                       }}
@@ -250,175 +220,79 @@ export default function DatHang({ route }) {
                     >
                       <Text style={styles.qtyText}>-</Text>
                     </TouchableOpacity>
-
                     <Text style={{ marginHorizontal: 10 }}>
                       {orderDetails.items[index]?.soluong ?? 1}
                     </Text>
-
                     <TouchableOpacity
                       onPress={() => {
                         const newItems = [...orderDetails.items];
-                        // console.log(">>> Tăng số lượng:", newItems[index]);
-
                         if (newItems[index].soluong < newItems[index].tonKho) {
                           newItems[index].soluong += 1;
-                          const tongtien = newItems.reduce((sum, i) => sum + i.soluong * i.dongia, 0);
+                          const tongtien = newItems.reduce((s, i) => s + i.soluong * i.dongia, 0);
                           setOrderDetails({ ...orderDetails, items: newItems, tongtien });
-
                         } else {
-                          Alert.alert("Vượt số lượng tồn kho", "Không thể đặt quá số lượng còn lại trong kho.");
+                          ToastAndroid.show("Số lượng vượt quá tồn kho!", ToastAndroid.SHORT);
                         }
                       }}
                       style={styles.qtyButton}
                     >
                       <Text style={styles.qtyText}>+</Text>
                     </TouchableOpacity>
-
                   </View>
-                </View>
+                )}
               </View>
-            );
-          })}
-
-          {/* Tổng tiền từ giỏ hàng */}
-          <Text style={{ fontWeight: 'bold', marginBottom: 10 }}>
-            Tổng tiền: {Number(orderDetails.tongtien).toLocaleString()}đ
-          </Text>
-
-        </>
-
-      )}
-
-
-      {/* <Text>Họ tên: {userInfo.ten}</Text>
-      <Text>SĐT: {userInfo.sdt}</Text> */}
-      {selectedItem && (
-        <View
-          key={selectedItem.id || index}
-          style={{
-            flexDirection: 'row',
-            borderWidth: 1,
-            borderColor: '#ccc',
-            padding: 10,
-            borderRadius: 8,
-            marginBottom: 15,
-          }}
-        >
-          <Image
-            source={{ uri: selectedItem.anh_dai_dien }}
-            style={{ width: 80, height: 80, marginRight: 10, borderRadius: 8 }}
-          />
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontWeight: 'bold', fontSize: 16 }}>{selectedItem.ten_san_pham}</Text>
-            <Text>Giá: {Number(selectedItem.gia).toLocaleString()}đ</Text>
-
-            <Text>Tồn kho: {selectedItem.soluong}</Text>
-          </View>
+            </View>
+          ))}
         </View>
-      )}
 
-      {orderDetails.items.length > 0 && selectedItem && (
-        <>
-          <Text style={{ marginTop: 15 }}>Số lượng:</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 5 }}>
-
-            <TouchableOpacity
-              onPress={() => {
-                const currentQty = orderDetails.items[0]?.soluong ?? 1;
-                if (currentQty > 1) {
-                  const newQty = currentQty - 1;
-                  setOrderDetails((prev) => ({
-                    ...prev,
-                    items: [{ ...prev.items[0], soluong: newQty }],
-                    tongtien: newQty * selectedItem.gia,
-                  }));
-                }
-              }}
-              style={styles.qtyButton}
-            >
-              <Text style={styles.qtyText}>-</Text>
-            </TouchableOpacity>
-
-            <Text style={{ marginHorizontal: 10 }}>{orderDetails.items[0]?.soluong}</Text>
-
-            <TouchableOpacity
-              onPress={() => {
-                const currentQty = orderDetails.items[0]?.soluong ?? 1;
-                if (currentQty < selectedItem.soluong) {
-                  const newQty = currentQty + 1;
-                  setOrderDetails((prev) => ({
-                    ...prev,
-                    items: [{ ...prev.items[0], soluong: newQty }],
-                    tongtien: newQty * selectedItem.gia,
-                  }));
-                } else {
-                  ToastAndroid.show("Số lượng vượt quá tồn kho!", ToastAndroid.SHORT);
-                }
-              }}
-              style={styles.qtyButton}
-            >
-              <Text style={styles.qtyText}>+</Text>
-            </TouchableOpacity>
+        {/* Tổng hợp đơn hàng */}
+        <View style={styles.sectionBox}>
+          <Text style={styles.sectionTitle}>Tổng hợp</Text>
+          <View style={styles.rowBetween}>
+            <Text>Tạm tính</Text>
+            <Text>{Number(orderDetails.tongtien).toLocaleString()}đ</Text>
           </View>
-
-          {/* Tổng tiền ngay bên dưới */}
-          <View style={{ marginTop: 10 }}>
-            <Text style={{ fontWeight: 'bold' }}>
-              Tổng tiền: {Number(orderDetails.tongtien).toLocaleString()}đ
+          <View style={styles.rowBetween}>
+            <Text>Phí vận chuyển</Text>
+            <Text>0đ</Text>
+          </View>
+          <View style={styles.rowBetween}>
+            <Text>Giảm giá</Text>
+            <Text>0đ</Text>
+          </View>
+          <View style={styles.rowBetween}>
+            <Text style={{ fontWeight: 'bold', fontSize: 16 }}>Tổng cộng</Text>
+            <Text style={{ fontWeight: 'bold', fontSize: 16, color: 'red' }}>
+              {Number(orderDetails.tongtien).toLocaleString()}đ
             </Text>
           </View>
-        </>
-      )}
-      <Text style={{ marginTop: 20, fontWeight: 'bold', fontSize: 16 }}>Chọn địa chỉ giao hàng:</Text>
+        </View>
 
-
-      {diaChiList.length === 0 ? (
-        <Text style={{ fontStyle: 'italic' }}>Chưa có địa chỉ. Vui lòng thêm.</Text>
-      ) : (
-        diaChiList.map((dc) => (
+        {orderId !== '' && (
           <TouchableOpacity
-            key={dc.id}
-            onPress={() => {
-              setSelectedDiaChiId(dc.id);
-              setOrderDetails((prev) => ({ ...prev, diaChi: dc.diachi }));
-            }}
-            style={{
-              padding: 10,
-              marginVertical: 5,
-              borderWidth: 1,
-              borderColor: selectedDiaChiId === dc.id ? 'blue' : '#ccc',
-              borderRadius: 5,
-            }}
+            onPress={() => handleFetchOrderDetailsWithId(orderInfo)}
+            style={{ backgroundColor: '#007AFF', padding: 10, borderRadius: 5 }}
           >
-            <Text>{dc.diachi}</Text>
-            {dc.macdinh && <Text style={{ color: 'green' }}>[Mặc định]</Text>}
+            <Text style={{ color: 'white', textAlign: 'center' }}>Theo dõi đơn hàng</Text>
           </TouchableOpacity>
-        ))
-      )}
-      <TouchableOpacity
-        onPress={handlePlaceOrder}
-        style={{ backgroundColor: 'green', padding: 12, borderRadius: 8, marginTop: 20 }}
-      >
-        <Text style={{ color: '#fff', textAlign: 'center', fontWeight: 'bold' }}>Đặt hàng</Text>
-      </TouchableOpacity>
+        )}
+      </ScrollView>
 
-
-      {/* hiển thị chi tiết đơn hàng điều hướng qua theo dõi đơn hàng */}
-      {orderId !== '' && (
-        <TouchableOpacity
-          onPress={() => handleFetchOrderDetailsWithId(orderInfo)}
-          style={{ backgroundColor: '#007AFF', padding: 10, marginTop: 10, borderRadius: 5 }}
-        >
-          <Text style={{ color: 'white', textAlign: 'center' }}>Theo dõi đơn hàng</Text>
+      {/* Thanh đặt hàng dưới cùng */}
+      <View style={styles.bottomBar}>
+        <Text style={{ fontWeight: 'bold', fontSize: 16 }}>
+          {Number(orderDetails.tongtien).toLocaleString()}đ
+        </Text>
+        <TouchableOpacity style={styles.orderButton} onPress={handlePlaceOrder}>
+          <Text style={{ color: '#fff', fontWeight: 'bold' }}>Đặt hàng</Text>
         </TouchableOpacity>
-      )}
+      </View>
 
       {/* Modal chỉnh sửa thông tin khách hàng */}
       <Modal visible={showModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.label}>Chỉnh sửa thông tin</Text>
-
+            <Text style={styles.sectionTitle}>Chỉnh sửa thông tin</Text>
             <TextInput
               value={userInfo.username}
               onChangeText={(text) => setUserInfo({ ...userInfo, username: text })}
@@ -432,41 +306,59 @@ export default function DatHang({ route }) {
               style={styles.input}
               keyboardType="phone-pad"
             />
-
             <View style={styles.modalButtons}>
-              <Button title="Lưu" onPress={handleSave} />
-              <Button title="Huỷ" color="gray" onPress={() => setShowModal(false)} />
+              <TouchableOpacity onPress={handleSave} style={styles.saveBtn}>
+                <Text style={{ color: '#fff' }}>Lưu</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setShowModal(false)} style={styles.cancelBtn}>
+                <Text style={{ color: '#fff' }}>Huỷ</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
-
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: 20, fontWeight: 'bold', marginBottom: 10 },
-  label: { fontWeight: 'bold', fontSize: 16 },
-  input: { borderWidth: 1, padding: 8, marginVertical: 10 },
-  orderBox: { borderWidth: 1, padding: 10, marginBottom: 10 },
-  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    justifyContent: 'center',
-    padding: 20,
+  sectionBox: {
+    backgroundColor: '#fff',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+    elevation: 2
   },
+  sectionTitle: { fontWeight: 'bold', fontSize: 16, marginBottom: 8 },
+  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+  productCard: {
+    flexDirection: 'row',
+    marginBottom: 12,
+    borderBottomWidth: 1,
+    borderColor: '#eee',
+    paddingBottom: 8
+  },
+  productImage: { width: 70, height: 70, borderRadius: 6, marginRight: 10 },
+  productName: { fontSize: 15, fontWeight: '600' },
+  qtyRow: { flexDirection: 'row', alignItems: 'center', marginTop: 5 },
+  qtyButton: { backgroundColor: '#ddd', paddingHorizontal: 10, borderRadius: 5 },
+  qtyText: { fontSize: 18, fontWeight: 'bold' },
+  bottomBar: {
+    position: 'absolute',
+    bottom: 0, left: 0, right: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    padding: 12,
+    borderTopWidth: 1,
+    borderColor: '#eee'
+  },
+  orderButton: { backgroundColor: 'green', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 6 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'center', padding: 20 },
   modalContent: { backgroundColor: '#fff', padding: 20, borderRadius: 8 },
+  input: { borderWidth: 1, borderColor: '#ccc', padding: 8, marginVertical: 10, borderRadius: 5 },
   modalButtons: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 20 },
-  qtyButton: {
-    backgroundColor: '#ddd',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 5,
-  },
-  qtyText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
+  saveBtn: { backgroundColor: 'green', padding: 10, borderRadius: 5 },
+  cancelBtn: { backgroundColor: 'gray', padding: 10, borderRadius: 5 }
 });

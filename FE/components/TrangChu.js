@@ -88,7 +88,7 @@ const TrangChu = ({ navigation }) => {
     <View style={styles.container}>
       {/* // HEADER + SEARCH + DANH MỤC */}
       <View style={styles.header}>
-        <Text style={styles.title}>AnTiiCo</Text>
+        <Text style={styles.title}>Trang chủ</Text>
         <View style={styles.iconGroup}>
           <TouchableOpacity onPress={() => navigation.navigate("Thông báo")}>
             <Ionicons name="notifications-outline" size={24} color="#000" />
