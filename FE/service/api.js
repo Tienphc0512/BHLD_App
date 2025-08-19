@@ -406,14 +406,17 @@ export async function fetchNotifications(token) {
 //   }
 // }
 
-//api huỷ đơn hàng
-export async function cancelOrder(orderId, token) {
+export async function cancelOrder(orderId, token, lydo) {
   try {
-    const response = await axios.delete(`${BASE_URL}/api/huy_don_hang/${orderId}`, {
-      headers: {
-        Authorization: `Bearer ${token}`
+    const response = await axios.delete(
+      `${BASE_URL}/api/huy_don_hang/${orderId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        },
+        data: { lydo }  //  axios DELETE có thể gửi body qua "data"
       }
-    });
+    );
     return response.data;
   } catch (error) {
     if (error.response && error.response.data) {
@@ -423,6 +426,7 @@ export async function cancelOrder(orderId, token) {
     }
   }
 }
+
 
 // aoi xem lịch sử tìm kiếm = ai
 export async function fetchChatHistoryAI(token) {

@@ -11,8 +11,12 @@ import {
 import { useAuth } from '../../context/Auth';
 import { fetchCancelDetailsHis } from '../../service/api';
 import Thongtingiaohang from '../Modal/Thongtingiaohang';
+import { useRoute } from "@react-navigation/native";
 
 export default function DonHangDaHuy() {
+  //lấy thông tin từ top tabs và hightlight
+    const route = useRoute();
+  const { order, highlightId } = route.params || {};
     const { token } = useAuth();
     const [orders, setOrders] = useState([]);
     const [refreshing, setRefreshing] = useState(false);
@@ -71,6 +75,7 @@ const groupedOrders = orders.reduce((acc, item) => {
       sdt: item.sdt,
       diachi: item.diachi,
       ngayhuy: item.ngayhuy,
+      lydo: item.lydo || 'Không có ',
       tongtien: item.tongtien || 0,
       sanpham: [{
         ten: item.tensanpham || item.ten || 'Chưa có tên',
@@ -147,12 +152,65 @@ const toggleExpand = (dathang_id) => {
 //   );
 // };
 
+// const renderItem = ({ item }) => {
+//   const sanpham = item.sanpham || [];
+//   const isExpanded = expandedOrders.includes(item.dathang_id);
+//   const isHighlighted = item.dathang_id === highlightId; // check highlight
+//   return (
+//      <View style={[styles.orderItem, isHighlighted && styles.highlight]}>
+//       <View style={styles.header}>
+//         <Text style={styles.orderCode}>Mã đơn: {item.dathang_id}</Text>
+//         <View style={[styles.statusBadge, { backgroundColor: '#e74c3c' }]}>
+//           <Text style={styles.statusText}>Đã huỷ</Text>
+//         </View>
+//       </View>
+
+//       <View style={styles.productContainer}>
+//         {sanpham.slice(0, 1).map((sp, idx) => (
+//           <View key={idx} style={styles.productItem}>
+//             <Text style={styles.productName}>{sp.ten}</Text>
+//             <Text>x{sp.soluong} - {Number(sp.dongia).toLocaleString()}đ</Text>
+
+//           </View>
+//         ))}
+
+//         {sanpham.length > 1 && !isExpanded && (
+//           <Text style={styles.moreText}>...và {sanpham.length - 1} sản phẩm khác</Text>
+//         )}
+
+//         {isExpanded &&
+//           sanpham.slice(1).map((sp, idx) => (
+//             <View key={idx + 1} style={styles.productItem}>
+//               <Text style={styles.productName}>{sp.ten}</Text>
+//               <Text>x{sp.soluong} - {Number(sp.dongia).toLocaleString()}đ</Text>
+//             </View>
+//           ))}
+
+//         {sanpham.length > 1 && (
+//           <TouchableOpacity onPress={() => toggleExpand(item.dathang_id)}>
+//             <Text style={styles.toggleText}>{isExpanded ? 'Thu gọn' : 'Xem thêm'}</Text>
+//           </TouchableOpacity>
+//         )}
+//       </View>
+
+//       <Text style={styles.infoText}>Tổng tiền: {Number(item.sanpham[0].tongtien).toLocaleString()}đ</Text>
+//       <Text style={styles.infoText}>Ngày huỷ: {new Date(item.ngayhuy).toLocaleString()}</Text>
+//       <Text style={styles.infoText}>Lý do: {item.lydo || 'Không có'}</Text>
+//       <TouchableOpacity onPress={() => showShippingInfo(item)}>
+//         <Text style={styles.linkText}>Thông tin giao hàng</Text>
+//       </TouchableOpacity>
+//     </View>
+//   );
+// };
+
 const renderItem = ({ item }) => {
   const sanpham = item.sanpham || [];
   const isExpanded = expandedOrders.includes(item.dathang_id);
+  const isHighlighted = item.dathang_id === highlightId;
 
   return (
-    <View style={styles.orderItem}>
+    <View style={[styles.orderItem, isHighlighted && styles.highlight]}>
+      {/* HEADER */}
       <View style={styles.header}>
         <Text style={styles.orderCode}>Mã đơn: {item.dathang_id}</Text>
         <View style={[styles.statusBadge, { backgroundColor: '#e74c3c' }]}>
@@ -160,12 +218,12 @@ const renderItem = ({ item }) => {
         </View>
       </View>
 
+      {/* SẢN PHẨM */}
       <View style={styles.productContainer}>
         {sanpham.slice(0, 1).map((sp, idx) => (
           <View key={idx} style={styles.productItem}>
             <Text style={styles.productName}>{sp.ten}</Text>
-            <Text>Số lượng: {sp.soluong}</Text>
-            <Text>Đơn giá: {Number(sp.dongia).toLocaleString()}đ</Text>
+            <Text style={{ color: '#7f8c8d' }}>x{sp.soluong} - {Number(sp.dongia).toLocaleString()}đ</Text>
           </View>
         ))}
 
@@ -177,8 +235,7 @@ const renderItem = ({ item }) => {
           sanpham.slice(1).map((sp, idx) => (
             <View key={idx + 1} style={styles.productItem}>
               <Text style={styles.productName}>{sp.ten}</Text>
-              <Text>Số lượng: {sp.soluong}</Text>
-              <Text>Đơn giá: {Number(sp.dongia).toLocaleString()}đ</Text>
+              <Text style={{ color: '#7f8c8d' }}>x{sp.soluong} - {Number(sp.dongia).toLocaleString()}đ</Text>
             </View>
           ))}
 
@@ -189,15 +246,21 @@ const renderItem = ({ item }) => {
         )}
       </View>
 
-      <Text style={styles.infoText}>Tổng tiền: {Number(item.sanpham[0].tongtien).toLocaleString()}đ</Text>
-      <Text style={styles.infoText}>Ngày huỷ: {new Date(item.ngayhuy).toLocaleString()}</Text>
+      {/* THÔNG TIN ĐƠN HÀNG */}
+      <View style={{ marginBottom: 8 }}>
+        <Text style={styles.infoText}>Tổng tiền: {Number(item.sanpham[0].tongtien).toLocaleString()}đ</Text>
+        <Text style={styles.infoText}>Ngày huỷ: {new Date(item.ngayhuy).toLocaleString()}</Text>
+        <Text style={styles.infoText}>Lý do: {item.lydo || 'Không có'}</Text>
+      </View>
 
+      {/* THÔNG TIN GIAO HÀNG */}
       <TouchableOpacity onPress={() => showShippingInfo(item)}>
         <Text style={styles.linkText}>Thông tin giao hàng</Text>
       </TouchableOpacity>
     </View>
   );
 };
+
     if (loading) {
         return (
             <View style={styles.center}>
@@ -226,27 +289,32 @@ const renderItem = ({ item }) => {
     );
 }
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f6f9fc', padding: 16 },
+  container: { flex: 1, backgroundColor: '#f2f4f8', padding: 12 },
   orderItem: {
     backgroundColor: '#fff',
     padding: 16,
-    marginVertical: 8,
-    borderRadius: 10,
-    borderColor: '#dcdde1',
+    marginVertical: 6,
+    borderRadius: 12,
     borderWidth: 1,
-    elevation: 3,
+    borderColor: '#e0e0e0',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
   },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  orderCode: { fontWeight: 'bold', fontSize: 16, color: '#34495e' },
-  statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
-  statusText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
-  productContainer: { marginTop: 8 },
-  productItem: { marginBottom: 6 },
-  productName: { fontWeight: 'bold' },
-  moreText: { color: '#7f8c8d', fontStyle: 'italic' },
-  toggleText: { color: '#2980b9', textDecorationLine: 'underline', marginTop: 4 },
-  infoText: { fontSize: 15, color: '#2f3640', marginBottom: 2 },
-  linkText: { color: '#2980b9', marginTop: 8, fontWeight: 'bold' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  orderCode: { fontWeight: 'bold', fontSize: 16, color: '#2c3e50' },
+  statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 14 },
+  statusText: { color: '#fff', fontSize: 12, fontWeight: '600' },
+  productContainer: { marginBottom: 12, padding: 12, backgroundColor: '#f8f9fa', borderRadius: 10 },
+  productItem: { marginBottom: 8, paddingBottom: 4, borderBottomColor: '#dcdde1', borderBottomWidth: 0.5 },
+  productName: { fontWeight: '600', fontSize: 15, color: '#34495e' },
+  moreText: { color: '#7f8c8d', fontStyle: 'italic', marginTop: 4 },
+  toggleText: { color: '#2980b9', textDecorationLine: 'underline', marginTop: 6, fontWeight: '500' },
+  infoText: { fontSize: 14, color: '#2f3640', marginBottom: 4 },
+  linkText: { color: '#2980b9', marginTop: 6, fontWeight: 'bold' },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  empty: { textAlign: 'center', color: '#888', marginTop: 20, fontSize: 16 },
+  empty: { textAlign: 'center', color: '#95a5a6', marginTop: 20, fontSize: 16 },
+  highlight: { backgroundColor: "#fff8e1", borderColor: "#f39c12", borderWidth: 2 },
 });

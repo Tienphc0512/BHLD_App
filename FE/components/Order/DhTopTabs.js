@@ -7,12 +7,14 @@ import {
   TouchableOpacity,
   RefreshControl,
   ToastAndroid,
-  Alert,
+  Modal,
+  TextInput,
 } from "react-native";
 import Checkbox from "expo-checkbox";
 import Thongtingiaohang from "../Modal/Thongtingiaohang";
 import { cancelOrder } from "../../service/api";
 import { useAuth } from "../../context/Auth";
+import { useNavigation } from "@react-navigation/native";
 
 export default function DhTopTabs({ orders, refreshing, onRefresh }) {
   const { token } = useAuth();
@@ -20,6 +22,10 @@ export default function DhTopTabs({ orders, refreshing, onRefresh }) {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedOrderInfo, setSelectedOrderInfo] = useState(null);
   const [expandedOrders, setExpandedOrders] = useState([]);
+  const navigation = useNavigation();
+  // State lưu modal và lý do
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
 
   const toggleSelectOrder = (id) => {
     setSelectedOrders((prev) =>
@@ -36,26 +42,56 @@ export default function DhTopTabs({ orders, refreshing, onRefresh }) {
     setModalVisible(true);
   };
 
-  const handleCancelOrders = () => {
-    Alert.alert("Xác nhận", `Bạn có chắc muốn huỷ ${selectedOrders.length} đơn hàng?`, [
-      { text: "Không" },
-      {
-        text: "Có",
-        onPress: async () => {
-          try {
-            for (const id of selectedOrders) {
-              await cancelOrder(id, token);
-            }
-            ToastAndroid.show("Hủy đơn hàng thành công!", ToastAndroid.SHORT);
-          } catch (err) {
-            ToastAndroid.show("Hủy đơn hàng thất bại.", ToastAndroid.SHORT);
-          }
-        },
-      },
-    ]);
-  };
+  // const handleCancelOrders = () => {
+  //   Alert.alert("Xác nhận", `Bạn có chắc muốn huỷ ${selectedOrders.length} đơn hàng?`, [
+  //     { text: "Không" },
+  //     {
+  //       text: "Có",
+  //       onPress: async () => {
+  //         try {
+  //           for (const id of selectedOrders) {
+  //             await cancelOrder(id, token);
+  //           }
+  //           ToastAndroid.show("Hủy đơn hàng thành công!", ToastAndroid.SHORT);
+  //           setSelectedOrders([]); //  reset lại danh sách chọn
+  //         onRefresh(); 
+  //         } catch (err) {
+  //           ToastAndroid.show("Hủy đơn hàng thất bại.", ToastAndroid.SHORT);
+  //         }
+  //       },
+  //     },
+  //   ]);
+  // };
+
+
 
   // //chia màu cho tunefg trạng thái đơn hàng
+
+  // mở modal khi bấm nút "Hủy đơn"
+  const handleCancelOrders = () => {
+    if (selectedOrders.length === 0) {
+      ToastAndroid.show("Vui lòng chọn đơn hàng để hủy!", ToastAndroid.SHORT);
+      return;
+    }
+    setShowCancelModal(true);
+  };
+
+  // xác nhận hủy trong modal
+  const confirmCancelOrders = async () => {
+    try {
+      for (const id of selectedOrders) {
+        await cancelOrder(id, token, cancelReason); // truyền thêm lý do vào API
+      }
+      ToastAndroid.show("Hủy đơn hàng thành công!", ToastAndroid.SHORT);
+      setSelectedOrders([]);     // reset chọn
+      setCancelReason("");       // clear lý do
+      setShowCancelModal(false); // đóng modal
+      onRefresh();               // refresh danh sách
+    } catch (err) {
+      ToastAndroid.show("Hủy đơn hàng thất bại.", ToastAndroid.SHORT);
+    }
+  };
+
   const getStatusColor = (status) => {
     switch (status) {
       case 'choxuly':
@@ -116,54 +152,35 @@ export default function DhTopTabs({ orders, refreshing, onRefresh }) {
         {/* Hàng đầu: mã đơn + trạng thái */}
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
           <Text style={styles.orderCode}>Mã đơn: {item.dathang_id}</Text>
-         <View
-  style={[styles.statusBadge, { backgroundColor: getStatusColor(item.trangthai) }]}
->
-  <Text style={{ color: '#fff', fontWeight: '600' }}>
-    {item.trangthai === "choxuly"
-      ? "Chờ xử lý"
-      : item.trangthai === "danggiao"
-        ? "Đang giao"
-        : item.trangthai === "hoanthanh"
-          ? "Đã giao"
-          : item.trangthai === "dahuy"
-            ? "Đã huỷ"
-            : "Không xác định"}
-  </Text>
-</View>
+          <View
+            style={[styles.statusBadge, { backgroundColor: getStatusColor(item.trangthai) }]}
+          >
+            <Text style={{ color: '#fff', fontWeight: '600' }}>
+              {item.trangthai === "choxuly"
+                ? "Chờ xử lý"
+                : item.trangthai === "danggiao"
+                  ? "Đang giao"
+                  : item.trangthai === "hoanthanh"
+                    ? "Đã giao"
+                    : item.trangthai === "dahuy"
+                      ? "Đã huỷ"
+                      : "Không xác định"}
+            </Text>
+          </View>
 
         </View>
-
-        {/* Checkbox hủy nếu chờ xử lý */}
-        {isPending && (
-          <View style={styles.checkboxContainer}>
-            <Checkbox
-              value={isSelected}
-              onValueChange={() => toggleSelectOrder(item.dathang_id)}
-              color="#e74c3c"
-            />
-            <Text style={styles.checkboxLabel}>Chọn để hủy</Text>
-          </View>
-        )}
 
         {/* Danh sách sản phẩm */}
         <View style={{ marginTop: 6 }}>
           {item.sanpham.length === 1 ? (
             <View>
               <Text style={styles.productName}>{item.sanpham[0].tensanpham}</Text>
-              <Text style={styles.infoText}>Số lượng: {item.sanpham[0].soluong}</Text>
-              <Text style={styles.priceText}>
-                Đơn giá: {Number(item.sanpham[0].dongia).toLocaleString()}đ
-              </Text>
+              <Text style={{ fontSize: 12, color: '#7f8c8d' }}>x{item.sanpham[0].soluong} - {Number(item.sanpham[0].dongia).toLocaleString()}đ</Text>
             </View>
           ) : (
             <View>
               <Text style={styles.productName}>{item.sanpham[0].tensanpham}</Text>
-              <Text style={styles.infoText}>Số lượng: {item.sanpham[0].soluong}</Text>
-              <Text style={styles.priceText}>
-                Đơn giá: {Number(item.sanpham[0].dongia).toLocaleString()}đ
-              </Text>
-
+              <Text style={{ fontSize: 12, color: '#7f8c8d' }}>x{item.sanpham[0].soluong} - {Number(item.sanpham[0].dongia).toLocaleString()}đ</Text>
               {!isExpanded && (
                 <Text style={{ color: "#7f8c8d" }}>
                   ...và {item.sanpham.length - 1} sản phẩm khác
@@ -174,10 +191,7 @@ export default function DhTopTabs({ orders, refreshing, onRefresh }) {
                 item.sanpham.slice(1).map((sp, idx) => (
                   <View key={idx + 1} style={{ marginTop: 4 }}>
                     <Text style={styles.productName}>{sp.tensanpham}</Text>
-                    <Text style={styles.infoText}>Số lượng: {sp.soluong}</Text>
-                    <Text style={styles.priceText}>
-                      Đơn giá: {Number(sp.dongia).toLocaleString()}đ
-                    </Text>
+                    <Text style={{ fontSize: 12, color: '#7f8c8d' }}>x{sp.soluong} - {Number(sp.dongia).toLocaleString()}đ</Text>
                   </View>
                 ))}
 
@@ -211,10 +225,39 @@ export default function DhTopTabs({ orders, refreshing, onRefresh }) {
           Tổng: {Number(item.sanpham[0].tongtien).toLocaleString()}đ
         </Text>
 
+      <View style={styles.actionRow}> 
+        {/* Checkbox hủy nếu chờ xử lý */}
+        {isPending && (
+          <View style={styles.checkboxContainer}>
+            <Checkbox
+              value={isSelected}
+              onValueChange={() => toggleSelectOrder(item.dathang_id)}
+              color="#e74c3c"
+            />
+            <Text style={styles.checkboxLabel}>Chọn để hủy</Text>
+          </View>
+        )}
+
+        {/* Nếu đã hủy thì hiển thị link xem chi tiết */}
+        {item.trangthai === "dahuy" && (
+  <TouchableOpacity
+    onPress={() =>
+      navigation.navigate("Lịch sử hủy", {
+        order: item,
+        highlightId: item.dathang_id, // truyền id đơn cần highlight
+      })
+    }
+  >
+    <Text style={styles.cancelDetailLink}>Xem chi tiết hủy đơn</Text>
+  </TouchableOpacity>
+)}
+
+
         {/* Thông tin giao hàng */}
         <TouchableOpacity onPress={() => showShippingInfo(item)}>
           <Text style={styles.shippingLink}>Thông tin giao hàng</Text>
         </TouchableOpacity>
+        </View> 
       </View>
     );
   };
@@ -243,6 +286,39 @@ export default function DhTopTabs({ orders, refreshing, onRefresh }) {
         onClose={() => setModalVisible(false)}
         orderInfo={selectedOrderInfo}
       />
+      <Modal visible={showCancelModal} transparent animationType="slide">
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>
+              Bạn có chắc muốn hủy {selectedOrders.length} đơn hàng?
+            </Text>
+
+            <TextInput
+              style={styles.input}
+              placeholder="Nhập lý do (không bắt buộc)"
+              value={cancelReason}
+              onChangeText={setCancelReason}
+            />
+
+            <View style={styles.row}>
+              <TouchableOpacity
+                onPress={() => setShowCancelModal(false)}
+                style={styles.buttonCancel}
+              >
+                <Text>Không</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={confirmCancelOrders}
+                style={styles.buttonConfirm}
+              >
+                <Text style={{ color: "#fff" }}>Có</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
     </View>
   );
 }
@@ -263,32 +339,87 @@ const styles = StyleSheet.create({
   orderCode: { fontWeight: "bold", fontSize: 16, color: "#2c3e50" },
   infoText: { fontSize: 13, color: "#555" },
   productName: { fontWeight: "600", fontSize: 14, color: "#34495e" },
-  priceText: { fontSize: 13, fontWeight: "500", color: "#27ae60" },
   totalText: { fontSize: 15, fontWeight: "700", color: "#27ae60", marginTop: 8 },
   statusBadge: {
     paddingVertical: 4,
     paddingHorizontal: 10,
     borderRadius: 12,
   },
-  checkboxContainer: { flexDirection: "row", alignItems: "center", marginTop: 6 },
+  checkboxContainer: { flexDirection: "row", alignItems: "center", marginTop: 1, marginRight: 90 },
   checkboxLabel: { marginLeft: 8, color: "#7f8c8d" },
   shippingLink: {
     color: "#2980b9",
-    marginTop: 10,
+    // marginTop: 10,
     fontWeight: "bold",
     textAlign: "right",
   },
   cancelButton: {
-  backgroundColor: "#e74c3c",
-  padding: 12,
-  borderRadius: 8,
-  margin: 16,
-  alignItems: "center",
-},
-cancelButtonText: {
-  color: "#fff",
+    backgroundColor: "#e74c3c",
+    padding: 12,
+    borderRadius: 8,
+    margin: 16,
+    alignItems: "center",
+  },
+  cancelButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 16,
+  },
+  // modal lý do
+  modalContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  modalContent: {
+    width: "80%",
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    padding: 20,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    marginBottom: 10,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
+    padding: 8,
+    marginBottom: 15,
+  },
+  row: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  buttonCancel: {
+    padding: 10,
+    backgroundColor: "#ddd",
+    borderRadius: 8,
+    flex: 1,
+    marginRight: 5,
+    alignItems: "center",
+  },
+  buttonConfirm: {
+    padding: 10,
+    backgroundColor: "red",
+    borderRadius: 8,
+    flex: 1,
+    marginLeft: 5,
+    alignItems: "center",
+  },
+  //link xem chi tiết hủy
+  cancelDetailLink: {
+  color: "#e67e22",
+  marginRight: 70,
   fontWeight: "bold",
-  fontSize: 16,
+  textDecorationLine: "underline",
 },
-
+actionRow: {
+  flexDirection: "row",
+  justifyContent: "flex-end",
+  marginTop: 10,
+},
 });

@@ -197,10 +197,7 @@ export default function LichSuDatHang() {
                     {sanpham.slice(0, 1).map((sp, idx) => (
                         <View key={idx} style={styles.productItem}>
                             <Text style={styles.productName}>{sp.ten}</Text>
-                            <Text>Số lượng: {sp.soluong}</Text>
-                            <Text style={styles.infoText}>
-                                Đơn giá: {(sp.tongtien / sp.soluong).toLocaleString()}đ
-                            </Text>
+                            <Text style={{ color: '#7f8c8d' }}>x{sp.soluong} - {(sp.tongtien / sp.soluong).toLocaleString()}đ</Text>
                         </View>
                     ))}
 
@@ -212,10 +209,7 @@ export default function LichSuDatHang() {
                         sanpham.slice(1).map((sp, idx) => (
                             <View key={idx + 1} style={styles.productItem}>
                                 <Text style={styles.productName}>{sp.ten}</Text>
-                                <Text>Số lượng: {sp.soluong}</Text>
-                                <Text style={styles.infoText}>
-                                    Đơn giá: {(sp.tongtien / sp.soluong).toLocaleString()}đ
-                                </Text>
+                                <Text style={{ color: '#7f8c8d' }}>x{sp.soluong} - {(sp.tongtien / sp.soluong).toLocaleString()}đ</Text>
                             </View>
                         ))}
 

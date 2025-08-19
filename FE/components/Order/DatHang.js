@@ -16,6 +16,7 @@ import { placeOrder, fetchOrderDetails, fetchTaiKhoan, updateTaiKhoan, fetchDiaC
 import { useAuth } from '../../context/Auth';
 import { useCart } from '../../context/CartContext';
 import { useNavigation } from '@react-navigation/native';
+import DiaChiModal from '../Modal/DiaChiModal';
 
 export default function DatHang({ route }) {
   const [orderDetails, setOrderDetails] = useState({
@@ -37,6 +38,7 @@ export default function DatHang({ route }) {
   const [selectedDiaChiId, setSelectedDiaChiId] = useState(null);
   const navigation = useNavigation();
   const { clearCartAfterPurchase } = useCart();
+  const [showDiaChiModal, setShowDiaChiModal] = useState(false);
 
   const fetchInfoAndInitOrder = async () => {
     setLoading(true);
@@ -93,7 +95,24 @@ export default function DatHang({ route }) {
     fetchInfoAndInitOrder();
   }, [selectedItem]);
 
-  const handlePlaceOrder = async () => {
+  const confirmPlaceOrder = () => {
+    Alert.alert(
+      "Xác nhận đặt hàng",
+      "Bạn có chắc chắn muốn đặt hàng không?",
+      [
+        {
+          text: "Hủy",
+          style: "cancel",
+        },
+        {
+          text: "Đồng ý",
+          onPress: () => handlePlaceOrderProcess(),
+        },
+      ]
+    );
+  };
+
+  const handlePlaceOrderProcess = async () => {
     setLoading(true);
     setMessage('');
 
@@ -140,6 +159,7 @@ export default function DatHang({ route }) {
     }
     setLoading(false);
   };
+
 
   const handleFetchOrderDetailsWithId = () => {
     navigation.navigate("Đơn hàng", { orderDetails: {} });
@@ -275,6 +295,7 @@ export default function DatHang({ route }) {
           >
             <Text style={{ color: 'white', textAlign: 'center' }}>Theo dõi đơn hàng</Text>
           </TouchableOpacity>
+
         )}
       </ScrollView>
 
@@ -283,7 +304,7 @@ export default function DatHang({ route }) {
         <Text style={{ fontWeight: 'bold', fontSize: 16 }}>
           {Number(orderDetails.tongtien).toLocaleString()}đ
         </Text>
-        <TouchableOpacity style={styles.orderButton} onPress={handlePlaceOrder}>
+        <TouchableOpacity style={styles.orderButton} onPress={confirmPlaceOrder}>
           <Text style={{ color: '#fff', fontWeight: 'bold' }}>Đặt hàng</Text>
         </TouchableOpacity>
       </View>
@@ -305,6 +326,26 @@ export default function DatHang({ route }) {
               placeholder="Số điện thoại"
               style={styles.input}
               keyboardType="phone-pad"
+            />
+            {/* Hiển thị chữ "Thêm địa chỉ" */}
+            <TouchableOpacity
+              onPress={() => setShowDiaChiModal(true)}
+              style={{
+                padding: 10,
+                backgroundColor: '#3498db',
+                borderRadius: 5,
+                marginVertical: 10,
+              }}
+            >
+              <Text style={{ color: '#fff', textAlign: 'center', fontWeight: 'bold' }}>
+                Thêm địa chỉ
+              </Text>
+            </TouchableOpacity>
+
+            {/* Modal chọn/ thêm địa chỉ */}
+            <DiaChiModal
+              visible={showDiaChiModal}
+              onClose={() => setShowDiaChiModal(false)}
             />
             <View style={styles.modalButtons}>
               <TouchableOpacity onPress={handleSave} style={styles.saveBtn}>

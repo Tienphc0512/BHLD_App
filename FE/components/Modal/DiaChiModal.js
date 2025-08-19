@@ -61,8 +61,7 @@ export default function DiaChiModal({ visible, onClose }) {
     <Modal visible={visible} animationType="slide" transparent>
       <View style={styles.overlay}>
         <View style={styles.container}>
-          
-          {/* Header Modal */}
+          {/* Header */}
           <View style={styles.header}>
             <Text style={styles.title}>Quản lý địa chỉ</Text>
             <TouchableOpacity onPress={onClose}>
@@ -70,7 +69,7 @@ export default function DiaChiModal({ visible, onClose }) {
             </TouchableOpacity>
           </View>
 
-          {/* Thêm địa chỉ mới */}
+          {/* Input thêm địa chỉ */}
           <View style={styles.newCard}>
             <TextInput
               value={newDiaChi}
@@ -84,10 +83,10 @@ export default function DiaChiModal({ visible, onClose }) {
           </View>
 
           {/* Danh sách địa chỉ */}
-          <ScrollView style={{ flex: 1, marginTop: 10 }}>
+          <ScrollView style={{ maxHeight: 300 }}>
             {loading ? <Text>Đang tải...</Text> :
               list.map((item, index) => (
-                <View key={item._id || index.toString()} style={styles.card}>
+                <View key={item.id} style={styles.card}>
                   {editIndex === index ? (
                     <>
                       <TextInput
@@ -116,7 +115,7 @@ export default function DiaChiModal({ visible, onClose }) {
                   ) : (
                     <>
                       <Text style={styles.text}><Text style={{ fontWeight: 'bold' }}>Địa chỉ:</Text> {item.diachi}</Text>
-                      <Text style={styles.text}><Text style={{ fontWeight: 'bold' }}>Loại:</Text> {item.macdinh ? 'Chính' : 'Phụ'}</Text>
+                      <Text style={styles.text}><Text style={{ fontWeight: 'bold' }}>Loại địa chỉ:</Text> {item.macdinh ? 'Chính' : 'Phụ'}</Text>
                       <View style={styles.buttonRow}>
                         <TouchableOpacity onPress={() => setEditIndex(index)} style={styles.editBtn}>
                           <Text style={styles.btnText}>Sửa</Text>
@@ -131,6 +130,11 @@ export default function DiaChiModal({ visible, onClose }) {
               ))
             }
           </ScrollView>
+
+          {/* Button Đóng
+          <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+            <Text style={styles.closeBtnText}>Đóng</Text>
+          </TouchableOpacity> */}
         </View>
       </View>
     </Modal>
@@ -140,23 +144,18 @@ export default function DiaChiModal({ visible, onClose }) {
 const styles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', paddingHorizontal: 15 },
   container: {
-    maxHeight: '85%',
     backgroundColor: '#fff',
     borderRadius: 15,
     padding: 16,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 5,
   },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
   title: { fontSize: 20, fontWeight: 'bold', color: '#333' },
   newCard: { padding: 10, backgroundColor: '#e7f3ff', borderRadius: 10, marginBottom: 10 },
-  card: { padding: 12, backgroundColor: '#f9f9f9', borderRadius: 10, marginBottom: 10, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5, elevation: 1 },
+  card: { padding: 12, backgroundColor: '#f9f9f9', borderRadius: 10, marginBottom: 10 },
   text: { fontSize: 16, marginBottom: 5, color: '#333' },
   input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 10, backgroundColor: '#fff', marginBottom: 8 },
   buttonRow: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 5 },
-  editBtn: { backgroundColor: '#4A6FA5', padding: 8, borderRadius: 5, marginRight: 10 },
+  editBtn: { backgroundColor: '#007bff', padding: 8, borderRadius: 5, marginRight: 10 },
   deleteBtn: { backgroundColor: '#dc3545', padding: 8, borderRadius: 5 },
   saveBtn: { backgroundColor: '#28a745', padding: 8, borderRadius: 5, marginTop: 5 },
   addBtn: { backgroundColor: '#007bff', padding: 10, borderRadius: 5, marginTop: 5, alignItems: 'center' },
@@ -166,4 +165,5 @@ const styles = StyleSheet.create({
   radioSelected: { backgroundColor: '#4A6FA5', borderColor: '#4A6FA5' },
   radioText: { fontWeight: 'bold', color: '#000' },
   radioTextSelected: { color: '#fff' },
+  closeBtn: { backgroundColor: '#6c757d', padding: 12, borderRadius: 8, marginTop: 10, alignItems: 'center' },
 });
